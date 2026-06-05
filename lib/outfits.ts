@@ -1,0 +1,178 @@
+// Shared outfit data layer.
+//
+// Composes outfits from the user's personalized wardrobe (lib/wardrobe.ts) so
+// what the app tells users to wear is drawn from what it told them to buy.
+// Outfits live in a module-level store, seeded with mock history and appended
+// to by `generateOutfit`.
+
+import type { Outfit, OutfitItem, OutfitOccasion } from './types';
+import { type CatalogKey, resolvePiece } from './wardrobe';
+import { getProfile } from './profile';
+
+// ─── Occasion metadata + recipes ─────────────────────────────────
+
+export const OCCASION_META: Record<OutfitOccasion, { label: string; icon: string }> = {
+  casual: { label: 'Casual', icon: 'cafe-outline' },
+  work: { label: 'Work', icon: 'briefcase-outline' },
+  'date-night': { label: 'Date Night', icon: 'heart-outline' },
+  'night-out': { label: 'Night Out', icon: 'wine-outline' },
+  travel: { label: 'Travel', icon: 'airplane-outline' },
+  wedding: { label: 'Wedding', icon: 'flower-outline' },
+  'business-meeting': { label: 'Business Meeting', icon: 'people-outline' },
+  vacation: { label: 'Vacation', icon: 'sunny-outline' },
+  errands: { label: 'Errands', icon: 'bag-handle-outline' },
+  gym: { label: 'Gym', icon: 'barbell-outline' },
+};
+
+export function occasionLabel(occasion: OutfitOccasion): string {
+  return OCCASION_META[occasion]?.label ?? occasion;
+}
+
+// Which catalog pieces each occasion assembles, head-to-toe.
+const RECIPES: Record<OutfitOccasion, CatalogKey[]> = {
+  casual: ['whiteTee', 'darkDenim', 'whiteSneakers', 'watch'],
+  work: ['whiteOxford', 'navyChinos', 'brownLoafers', 'leatherBelt'],
+  'date-night': ['navyBlazer', 'whiteTee', 'darkDenim', 'chelseaBoots'],
+  'night-out': ['bomberJacket', 'navyTee', 'darkDenim', 'chelseaBoots'],
+  travel: ['chambrayShirt', 'navyChinos', 'whiteSneakers', 'watch'],
+  wedding: ['navyBlazer', 'whiteOxford', 'greyTrousers', 'brownLoafers'],
+  'business-meeting': ['navyBlazer', 'whiteOxford', 'greyTrousers', 'leatherBelt'],
+  vacation: ['chambrayShirt', 'whiteTee', 'whiteSneakers', 'watch'],
+  errands: ['navyTee', 'darkDenim', 'whiteSneakers'],
+  gym: ['whiteTee', 'darkDenim', 'whiteSneakers'],
+};
+
+const GENERATED_NAMES: Record<OutfitOccasion, string> = {
+  casual: 'Easy Weekend',
+  work: 'Sharp Workday',
+  'date-night': 'Date Night Standout',
+  'night-out': 'After Dark',
+  travel: 'Travel Ready',
+  wedding: 'Wedding Guest',
+  'business-meeting': 'Boardroom Ready',
+  vacation: 'Vacation Mode',
+  errands: 'Quick Errands',
+  gym: 'Active Day',
+};
+
+const PREVIEW_BY_OCCASION: Record<OutfitOccasion, string> = {
+  casual: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=800&fit=crop',
+  work: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&h=800&fit=crop',
+  'date-night': 'https://images.unsplash.com/photo-1488161628813-04466f872be2?w=600&h=800&fit=crop',
+  'night-out': 'https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=600&h=800&fit=crop',
+  travel: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=600&h=800&fit=crop',
+  wedding: 'https://images.unsplash.com/photo-1593030103066-0093718efeb9?w=600&h=800&fit=crop',
+  'business-meeting': 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&h=800&fit=crop',
+  vacation: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=600&h=800&fit=crop',
+  errands: 'https://images.unsplash.com/photo-1516257984-b1b4d707412e?w=600&h=800&fit=crop',
+  gym: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=600&h=800&fit=crop',
+};
+
+function buildItems(occasion: OutfitOccasion, outfitId: string): OutfitItem[] {
+  return RECIPES[occasion].map((key) => {
+    const wardrobeItem = resolvePiece(key);
+    return {
+      id: `${outfitId}-${wardrobeItem.id}`,
+      wardrobeItemId: wardrobeItem.id,
+      wardrobeItem,
+    };
+  });
+}
+
+/**
+ * The preview image for a generated outfit. When the user has uploaded a photo
+ * we use it as the base so previews reflect their own face/body shape.
+ */
+function previewFor(occasion: OutfitOccasion): string {
+  return getProfile()?.photos?.front ?? PREVIEW_BY_OCCASION[occasion];
+}
+
+// ─── Store ───────────────────────────────────────────────────────
+
+function makeOutfit(
+  id: string,
+  occasion: OutfitOccasion,
+  name: string,
+  createdAt: string,
+  previewUrl: string,
+): Outfit {
+  return {
+    id,
+    userId: 'user1',
+    name,
+    occasion,
+    items: buildItems(occasion, id),
+    previewUrl,
+    createdAt,
+  };
+}
+
+const hoursAgo = (h: number) => new Date(Date.now() - h * 60 * 60 * 1000).toISOString();
+
+const store: Outfit[] = [
+  makeOutfit('seed-casual-friday', 'work', 'Casual Friday', hoursAgo(2), PREVIEW_BY_OCCASION.work),
+  makeOutfit('seed-date-night', 'date-night', 'Date Night', hoursAgo(24), PREVIEW_BY_OCCASION['date-night']),
+  makeOutfit('seed-business', 'business-meeting', 'Business Meeting', hoursAgo(72), PREVIEW_BY_OCCASION['business-meeting']),
+];
+
+let generatedCount = 0;
+
+/** All outfits, newest first. */
+export function getOutfits(): Outfit[] {
+  return [...store];
+}
+
+export function getOutfitById(id: string): Outfit | undefined {
+  return store.find((o) => o.id === id);
+}
+
+/**
+ * Generate a new outfit for the given occasion from the user's wardrobe, add it
+ * to the store (newest first) and return it.
+ */
+export function generateOutfit(occasion: OutfitOccasion): Outfit {
+  generatedCount += 1;
+  const id = `gen-${Date.now()}-${generatedCount}`;
+  const outfit = makeOutfit(
+    id,
+    occasion,
+    GENERATED_NAMES[occasion],
+    new Date().toISOString(),
+    previewFor(occasion),
+  );
+  store.unshift(outfit);
+  return outfit;
+}
+
+// ─── Derived helpers ─────────────────────────────────────────────
+
+function parseBudget(range: string): { min: number; max: number } {
+  const nums = (range.match(/\d+/g) ?? []).map(Number);
+  if (nums.length === 0) return { min: 0, max: 0 };
+  return { min: Math.min(...nums), max: Math.max(...nums) };
+}
+
+/** Estimated total cost range across an outfit's pieces. */
+export function estimateOutfitBudget(outfit: Outfit): { min: number; max: number } {
+  return outfit.items.reduce(
+    (acc, item) => {
+      const { min, max } = parseBudget(item.wardrobeItem.budgetRange);
+      return { min: acc.min + min, max: acc.max + max };
+    },
+    { min: 0, max: 0 },
+  );
+}
+
+export function formatTimeAgo(dateString: string): string {
+  const date = new Date(dateString);
+  const diffInHours = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60));
+  if (diffInHours < 1) return 'Just now';
+  if (diffInHours < 24) return `${diffInHours}h ago`;
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays === 1) return 'Yesterday';
+  return `${diffInDays}d ago`;
+}
+
+// Auto-generated fallback default export to keep parity with other lib modules.
+const _default = {} as any;
+export default _default;
