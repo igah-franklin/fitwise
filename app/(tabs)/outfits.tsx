@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { AnimatedScreen, SlideUp, Stagger, PressScale } from '@/components/ui/Motion';
 import { EmptyState } from '@/components/layout/EmptyState';
-import { THEME } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
 import { getOutfits, formatTimeAgo, generateOutfit, removeOutfit } from '@/lib/outfits';
 import type { Outfit, OutfitOccasion } from '@/lib/types';
@@ -29,6 +29,8 @@ const occasions: { key: OutfitOccasion; label: string; icon: string }[] = [
 ];
 
 export default function OutfitsScreen() {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   const [selectedOccasion, setSelectedOccasion] = useState<OutfitOccasion>('casual');
   const [selectedVibe, setSelectedVibe] = useState('Standard');
   const [modalVisible, setModalVisible] = useState(false);
@@ -75,7 +77,7 @@ export default function OutfitsScreen() {
         <View style={styles.outfitInfoHeader}>
           <Text style={styles.outfitName}>{outfit.name}</Text>
           <PressScale onPress={() => handleRemoveOutfit(outfit.id)} hitSlop={10}>
-            <Ionicons name="trash-outline" size={16} color={THEME.danger} />
+            <Ionicons name="trash-outline" size={16} color={theme.danger} />
           </PressScale>
         </View>
         <Text style={styles.outfitTime}>{formatTimeAgo(outfit.createdAt)}</Text>
@@ -91,7 +93,7 @@ export default function OutfitsScreen() {
           <View style={styles.header}>
             <Text style={styles.title}>Outfit Generator</Text>
             <PressScale style={styles.historyButton}>
-              <Ionicons name="time-outline" size={24} color={THEME.primary} />
+              <Ionicons name="time-outline" size={24} color={theme.primary} />
             </PressScale>
           </View>
 
@@ -101,7 +103,7 @@ export default function OutfitsScreen() {
               <SlideUp>
                 <Card padding="lg" style={styles.generatorCard}>
                   <View style={styles.generatorHeader}>
-                    <Ionicons name="sparkles" size={28} color={THEME.primary} />
+                    <Ionicons name="sparkles" size={28} color={theme.primary} />
                     <View style={styles.generatorText}>
                       <Text style={styles.generatorTitle}>AI Outfit Generator</Text>
                       <Text style={styles.generatorSubtitle}>
@@ -118,7 +120,7 @@ export default function OutfitsScreen() {
                   title="Create New Outfit"
                   variant="primary"
                   onPress={() => setModalVisible(true)}
-                  icon={<Ionicons name="color-wand-outline" size={18} color={THEME.onPrimary} />}
+                  icon={<Ionicons name="color-wand-outline" size={18} color={theme.onPrimary} />}
                   style={styles.generateButton}
                 />
               </SlideUp>
@@ -152,7 +154,7 @@ export default function OutfitsScreen() {
                 <Text style={styles.sectionTitle}>Features</Text>
                 <View style={styles.featuresGrid}>
                   <Card padding="md" style={styles.featureCard}>
-                    <Ionicons name="person-outline" size={24} color={THEME.accent} />
+                    <Ionicons name="person-outline" size={24} color={theme.accent} />
                     <Text style={styles.featureTitle}>Personal Fit</Text>
                     <Text style={styles.featureDescription}>
                       Outfits tailored to your body measurements
@@ -160,7 +162,7 @@ export default function OutfitsScreen() {
                   </Card>
                   
                   <Card padding="md" style={styles.featureCard}>
-                    <Ionicons name="camera-outline" size={24} color={THEME.primary} />
+                    <Ionicons name="camera-outline" size={24} color={theme.primary} />
                     <Text style={styles.featureTitle}>Visual Preview</Text>
                     <Text style={styles.featureDescription}>
                       See how outfits look with your likeness
@@ -168,7 +170,7 @@ export default function OutfitsScreen() {
                   </Card>
                   
                   <Card padding="md" style={styles.featureCard}>
-                    <Ionicons name="refresh-outline" size={24} color={THEME.success} />
+                    <Ionicons name="refresh-outline" size={24} color={theme.success} />
                     <Text style={styles.featureTitle}>Unlimited Tries</Text>
                     <Text style={styles.featureDescription}>
                       Generate as many variations as you want
@@ -176,7 +178,7 @@ export default function OutfitsScreen() {
                   </Card>
                   
                   <Card padding="md" style={styles.featureCard}>
-                    <Ionicons name="bag-outline" size={24} color={THEME.warning} />
+                    <Ionicons name="bag-outline" size={24} color={theme.warning} />
                     <Text style={styles.featureTitle}>Smart Shopping</Text>
                     <Text style={styles.featureDescription}>
                       Direct links to buy recommended pieces
@@ -201,7 +203,7 @@ export default function OutfitsScreen() {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Design Your Look</Text>
               <PressScale onPress={() => setModalVisible(false)} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color={THEME.text} />
+                <Ionicons name="close" size={24} color={theme.text} />
               </PressScale>
             </View>
 
@@ -220,7 +222,7 @@ export default function OutfitsScreen() {
                     <Ionicons 
                       name={occ.icon as any} 
                       size={20} 
-                      color={selectedOccasion === occ.key ? THEME.onPrimary : THEME.textMuted} 
+                      color={selectedOccasion === occ.key ? theme.onPrimary : theme.textMuted} 
                     />
                     <Text style={[
                       styles.modalChipText,
@@ -259,7 +261,7 @@ export default function OutfitsScreen() {
                 title="Generate Now"
                 variant="primary"
                 onPress={handleConfirmGenerate}
-                icon={<Ionicons name="sparkles" size={18} color={THEME.onPrimary} />}
+                icon={<Ionicons name="sparkles" size={18} color={theme.onPrimary} />}
               />
             </View>
           </View>
@@ -269,7 +271,7 @@ export default function OutfitsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   container: {
     paddingHorizontal: Layout.spacing.lg,
     paddingTop: Layout.spacing.xl,
@@ -283,13 +285,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '800',
-    color: THEME.text,
+    color: theme.text,
   },
   historyButton: {
     width: 44,
     height: 44,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.primaryMuted,
+    backgroundColor: theme.primaryMuted,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -307,18 +309,18 @@ const styles = StyleSheet.create({
   generatorTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
     marginBottom: 4,
   },
   generatorSubtitle: {
     fontSize: 14,
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
     lineHeight: 20,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
     marginBottom: Layout.spacing.md,
   },
   occasionsContainer: {
@@ -333,9 +335,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Layout.spacing.md,
     paddingVertical: Layout.spacing.sm,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: THEME.border,
+    borderColor: theme.border,
   },
   occasionChipText: {
     fontSize: 13,
@@ -353,7 +355,7 @@ const styles = StyleSheet.create({
   seeAllText: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.primary,
+    color: theme.primary,
   },
   outfitsGrid: {
     flexDirection: 'row',
@@ -363,10 +365,10 @@ const styles = StyleSheet.create({
   },
   outfitCard: {
     width: cardWidth,
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     borderRadius: Layout.borderRadius.md,
     borderWidth: 1,
-    borderColor: THEME.border,
+    borderColor: theme.border,
     overflow: 'hidden',
   },
   outfitPreview: {
@@ -376,7 +378,7 @@ const styles = StyleSheet.create({
   previewImage: {
     width: '100%',
     height: '100%',
-    backgroundColor: THEME.surfaceElevated,
+    backgroundColor: theme.surfaceElevated,
   },
   outfitOverlay: {
     position: 'absolute',
@@ -407,12 +409,12 @@ const styles = StyleSheet.create({
   outfitName: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.text,
+    color: theme.text,
     flex: 1,
   },
   outfitTime: {
     fontSize: 12,
-    color: THEME.textMuted,
+    color: theme.textMuted,
   },
   featuresGrid: {
     flexDirection: 'row',
@@ -428,14 +430,14 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.text,
+    color: theme.text,
     marginTop: Layout.spacing.sm,
     marginBottom: Layout.spacing.xs,
     textAlign: 'center',
   },
   featureDescription: {
     fontSize: 12,
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
     textAlign: 'center',
     lineHeight: 16,
   },
@@ -445,7 +447,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: THEME.background,
+    backgroundColor: theme.background,
     borderTopLeftRadius: Layout.borderRadius.xl,
     borderTopRightRadius: Layout.borderRadius.xl,
     paddingTop: Layout.spacing.lg,
@@ -461,13 +463,13 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: THEME.text,
+    color: theme.text,
   },
   closeButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: THEME.surfaceElevated,
+    backgroundColor: theme.surfaceElevated,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -478,7 +480,7 @@ const styles = StyleSheet.create({
   modalSectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
     marginTop: Layout.spacing.lg,
     marginBottom: Layout.spacing.md,
   },
@@ -494,28 +496,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: Layout.spacing.md,
     paddingVertical: Layout.spacing.md,
     borderRadius: Layout.borderRadius.lg,
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: THEME.border,
+    borderColor: theme.border,
     minWidth: '48%',
   },
   modalChipActive: {
-    backgroundColor: THEME.primary,
-    borderColor: THEME.primary,
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   modalChipText: {
     fontSize: 15,
     fontWeight: '600',
-    color: THEME.text,
+    color: theme.text,
   },
   modalChipTextActive: {
-    color: THEME.onPrimary,
+    color: theme.onPrimary,
   },
   modalFooter: {
     padding: Layout.spacing.lg,
     paddingBottom: Layout.spacing.xxl,
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     borderTopWidth: 1,
-    borderTopColor: THEME.border,
+    borderTopColor: theme.border,
   },
 });

@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { Text } from '@/components/ui/Text';
 import { Card } from '@/components/ui/Card';
 import { AnimatedScreen, SlideUp, Stagger, PressScale } from '@/components/ui/Motion';
-import { THEME } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
 import { useProfile, styleLabel, budgetLabel } from '@/lib/profile';
 import { useWardrobe } from '@/lib/wardrobe';
@@ -22,6 +22,8 @@ const CATEGORIES: { key: ClothingCategory; label: string; color: string }[] = [
 ];
 
 export default function AnalyticsScreen() {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   const profile = useProfile();
   const wardrobe = useWardrobe();
   const outfits = getOutfits();
@@ -42,7 +44,7 @@ export default function AnalyticsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <PressScale style={styles.headerButton} onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="chevron-back" size={24} color={THEME.text} />
+          <Ionicons name="chevron-back" size={24} color={theme.text} />
         </PressScale>
         <Text style={styles.headerTitle}>Style Analytics</Text>
         <View style={{ width: 40 }} />
@@ -55,7 +57,7 @@ export default function AnalyticsScreen() {
             <SlideUp>
               <Card style={styles.overviewCard} padding="lg">
                 <View style={styles.overviewHeader}>
-                  <Ionicons name="stats-chart" size={24} color={THEME.primary} />
+                  <Ionicons name="stats-chart" size={24} color={theme.primary} />
                   <Text style={styles.overviewTitle}>Shop-ability Score</Text>
                 </View>
                 <Text style={styles.overviewValue}>{shopabilityScore}%</Text>
@@ -95,12 +97,12 @@ export default function AnalyticsScreen() {
               <Text style={styles.sectionTitle}>App Usage</Text>
               <View style={styles.statsGrid}>
                 <Card style={styles.statCard} padding="md">
-                  <Ionicons name="sparkles" size={24} color={THEME.accent} style={styles.statIcon} />
+                  <Ionicons name="sparkles" size={24} color={theme.accent} style={styles.statIcon} />
                   <Text style={styles.statNumber}>{outfits.length}</Text>
                   <Text style={styles.statLabel}>Outfits Generated</Text>
                 </Card>
                 <Card style={styles.statCard} padding="md">
-                  <Ionicons name="pricetags" size={24} color={THEME.success} style={styles.statIcon} />
+                  <Ionicons name="pricetags" size={24} color={theme.success} style={styles.statIcon} />
                   <Text style={styles.statNumber} numberOfLines={1}>
                     {profile ? budgetLabel(profile.budget) : 'N/A'}
                   </Text>
@@ -115,10 +117,10 @@ export default function AnalyticsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.background,
+    backgroundColor: theme.background,
   },
   header: {
     height: 56,
@@ -131,16 +133,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: THEME.border,
+    borderColor: theme.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
   },
   scrollContent: {
     paddingHorizontal: Layout.spacing.lg,
@@ -149,7 +151,7 @@ const styles = StyleSheet.create({
   },
   overviewCard: {
     marginBottom: Layout.spacing.xl,
-    backgroundColor: THEME.surfaceElevated,
+    backgroundColor: theme.surfaceElevated,
   },
   overviewHeader: {
     flexDirection: 'row',
@@ -160,34 +162,34 @@ const styles = StyleSheet.create({
   overviewTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
   },
   overviewValue: {
     fontSize: 48,
     fontWeight: '800',
-    color: THEME.primary,
+    color: theme.primary,
   },
   overviewSubtitle: {
     fontSize: 14,
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
     marginBottom: Layout.spacing.lg,
     marginTop: 4,
   },
   progressBarBg: {
     height: 8,
-    backgroundColor: THEME.border,
+    backgroundColor: theme.border,
     borderRadius: 4,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: THEME.primary,
+    backgroundColor: theme.primary,
     borderRadius: 4,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
     marginBottom: Layout.spacing.md,
   },
   compositionCard: {
@@ -202,12 +204,12 @@ const styles = StyleSheet.create({
     width: 80,
     fontSize: 13,
     fontWeight: '500',
-    color: THEME.text,
+    color: theme.text,
   },
   barTrack: {
     flex: 1,
     height: 12,
-    backgroundColor: THEME.surfaceElevated,
+    backgroundColor: theme.surfaceElevated,
     borderRadius: 6,
     overflow: 'hidden',
     marginHorizontal: Layout.spacing.md,
@@ -220,7 +222,7 @@ const styles = StyleSheet.create({
     width: 24,
     fontSize: 14,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
     textAlign: 'right',
   },
   statsGrid: {
@@ -237,12 +239,12 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 20,
     fontWeight: '800',
-    color: THEME.text,
+    color: theme.text,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: THEME.textMuted,
+    color: theme.textMuted,
     textAlign: 'center',
     fontWeight: '500',
   },

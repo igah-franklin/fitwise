@@ -8,7 +8,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native';
-import { THEME } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 
 interface ButtonProps extends TouchableOpacityProps {
   title: string;
@@ -30,6 +30,11 @@ export function Button({
   textStyle,
   ...props
 }: ButtonProps) {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
+  const variantStyles = makeVariantStyles(theme);
+  const variantText = makeVariantText(theme);
+
   const buttonStyle: ViewStyle[] = [
     styles.base,
     sizeStyles[size],
@@ -46,7 +51,7 @@ export function Button({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' ? (THEME.onPrimary ?? '#FFFFFF') : THEME.primary}
+          color={variant === 'primary' ? (theme.onPrimary ?? '#FFFFFF') : theme.primary}
           size="small"
           style={icon || loading ? styles.iconSpacing : undefined}
         />
@@ -66,7 +71,7 @@ export function Button({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   base: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -98,16 +103,16 @@ const sizeText = StyleSheet.create({
   lg: { fontSize: 18 },
 });
 
-const variantStyles = StyleSheet.create({
-  primary: { backgroundColor: THEME.primary },
-  secondary: { backgroundColor: THEME.surface ?? '#F3F4F6' },
+const makeVariantStyles = (theme: any) => StyleSheet.create({
+  primary: { backgroundColor: theme.primary },
+  secondary: { backgroundColor: theme.surface ?? '#F3F4F6' },
   ghost: { backgroundColor: 'transparent' },
-  outline: { backgroundColor: 'transparent', borderWidth: 1, borderColor: THEME.border },
+  outline: { backgroundColor: 'transparent', borderWidth: 1, borderColor: theme.border },
 });
 
-const variantText = StyleSheet.create({
-  primary: { color: THEME.onPrimary ?? '#FFFFFF' },
-  secondary: { color: THEME.text },
-  ghost: { color: THEME.primary },
-  outline: { color: THEME.text },
+const makeVariantText = (theme: any) => StyleSheet.create({
+  primary: { color: theme.onPrimary ?? '#FFFFFF' },
+  secondary: { color: theme.text },
+  ghost: { color: theme.primary },
+  outline: { color: theme.text },
 });

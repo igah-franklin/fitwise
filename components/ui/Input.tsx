@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, TextInput, Text, StyleSheet, type TextInputProps, type ViewStyle } from 'react-native';
-import { THEME } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -15,6 +15,8 @@ export function Input({
   style,
   ...props
 }: InputProps) {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   const [focused, setFocused] = useState(false);
 
   return (
@@ -26,7 +28,7 @@ export function Input({
           focused && styles.inputFocused,
           error ? styles.inputError : undefined,
         ]}
-        placeholderTextColor={THEME.textMuted ?? '#6B7280'}
+        placeholderTextColor={theme.textMuted ?? '#6B7280'}
         onFocus={(e) => {
           setFocused(true);
           props.onFocus?.(e);
@@ -43,11 +45,11 @@ export function Input({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   label: {
     fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: THEME.textSecondary ?? '#6B7280',
+    color: theme.textSecondary ?? '#6B7280',
     marginBottom: 6,
   },
   input: {
@@ -56,27 +58,27 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     fontSize: 16,
     fontFamily: 'Inter',
-    color: THEME.text,
-    backgroundColor: THEME.surface ?? '#F9FAFB',
+    color: theme.text,
+    backgroundColor: theme.surface ?? '#F9FAFB',
     borderWidth: 1,
-    borderColor: THEME.border ?? '#E5E7EB',
+    borderColor: theme.border ?? '#E5E7EB',
   },
   inputFocused: {
-    borderColor: THEME.primary,
+    borderColor: theme.primary,
   },
   inputError: {
-    borderColor: THEME.danger ?? '#EF4444',
+    borderColor: theme.danger ?? '#EF4444',
   },
   errorText: {
     fontSize: 12,
     fontFamily: 'Inter',
-    color: THEME.danger ?? '#EF4444',
+    color: theme.danger ?? '#EF4444',
     marginTop: 4,
   },
   hintText: {
     fontSize: 12,
     fontFamily: 'Inter',
-    color: THEME.textMuted ?? '#9CA3AF',
+    color: theme.textMuted ?? '#9CA3AF',
     marginTop: 4,
   },
 });

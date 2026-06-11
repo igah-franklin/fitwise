@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, type ViewProps, type ViewStyle } from 'react-native';
-import { THEME } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 
 interface CardProps extends ViewProps {
   shadow?: boolean;
@@ -21,6 +21,8 @@ export function Card({
   children,
   ...props
 }: CardProps) {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   return (
     <View
       style={[
@@ -36,12 +38,12 @@ export function Card({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   card: {
-    backgroundColor: THEME.surface ?? '#FFFFFF',
+    backgroundColor: theme.surface ?? '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: THEME.border ?? '#F1F5F9',
+    borderColor: theme.border ?? '#F1F5F9',
   },
   shadow: {
     shadowColor: '#000',

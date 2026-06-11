@@ -8,11 +8,13 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { AnimatedScreen, SlideUp, Stagger, PressScale } from '@/components/ui/Motion';
 import { EmptyState } from '@/components/layout/EmptyState';
-import { THEME } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
 import { useProfile, updateProfile } from '@/lib/profile';
 
 export default function PhotosScreen() {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   const profile = useProfile();
   
   const handleRemovePhoto = (type: 'front' | 'side') => {
@@ -43,7 +45,7 @@ export default function PhotosScreen() {
       {/* Header */}
       <View style={styles.header}>
         <PressScale style={styles.headerButton} onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="chevron-back" size={24} color={THEME.text} />
+          <Ionicons name="chevron-back" size={24} color={theme.text} />
         </PressScale>
         <Text style={styles.headerTitle}>My Photos</Text>
         <View style={{ width: 40 }} />
@@ -82,7 +84,7 @@ export default function PhotosScreen() {
                       <View style={styles.photoInfo}>
                         <Text style={styles.photoLabel}>Front View</Text>
                         <PressScale onPress={() => handleRemovePhoto('front')} style={styles.deleteButton} hitSlop={10}>
-                          <Ionicons name="trash-outline" size={20} color={THEME.danger} />
+                          <Ionicons name="trash-outline" size={20} color={theme.danger} />
                         </PressScale>
                       </View>
                     </Card>
@@ -96,7 +98,7 @@ export default function PhotosScreen() {
                       <View style={styles.photoInfo}>
                         <Text style={styles.photoLabel}>Side View</Text>
                         <PressScale onPress={() => handleRemovePhoto('side')} style={styles.deleteButton} hitSlop={10}>
-                          <Ionicons name="trash-outline" size={20} color={THEME.danger} />
+                          <Ionicons name="trash-outline" size={20} color={theme.danger} />
                         </PressScale>
                       </View>
                     </Card>
@@ -112,7 +114,7 @@ export default function PhotosScreen() {
                   variant="outline" 
                   onPress={() => router.push('/setup')} 
                   style={styles.uploadButton}
-                  icon={<Ionicons name="camera-outline" size={18} color={THEME.text} />}
+                  icon={<Ionicons name="camera-outline" size={18} color={theme.text} />}
                 />
               </SlideUp>
             )}
@@ -123,10 +125,10 @@ export default function PhotosScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.background,
+    backgroundColor: theme.background,
   },
   header: {
     height: 56,
@@ -139,16 +141,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: THEME.border,
+    borderColor: theme.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
   },
   scrollContent: {
     paddingHorizontal: Layout.spacing.lg,
@@ -158,11 +160,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
   },
   sectionSubtitle: {
     fontSize: 14,
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
     marginTop: 4,
     marginBottom: Layout.spacing.xl,
     lineHeight: 20,
@@ -177,25 +179,25 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     aspectRatio: 3 / 4,
-    backgroundColor: THEME.surfaceElevated,
+    backgroundColor: theme.surfaceElevated,
   },
   photoInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: Layout.spacing.md,
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
   },
   photoLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.text,
+    color: theme.text,
   },
   deleteButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: `${THEME.danger}15`,
+    backgroundColor: `${theme.danger}15`,
     justifyContent: 'center',
     alignItems: 'center',
   },

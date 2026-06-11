@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { AnimatedScreen, SlideUp, Stagger, PressScale } from '@/components/ui/Motion';
 import { EmptyState } from '@/components/layout/EmptyState';
-import { THEME } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
 import { isProfileComplete, getProfile } from '@/lib/profile';
 import { useWardrobe, buildWardrobe, markAsOwned, swapItem, removeWardrobeItem } from '@/lib/wardrobe';
@@ -20,12 +20,14 @@ const cardWidth = (width - Layout.spacing.lg * 3) / 2;
 const categories: { key: ClothingCategory; label: string; icon: string }[] = [
   { key: 'tops', label: 'Tops', icon: 'shirt-outline' },
   { key: 'bottoms', label: 'Bottoms', icon: 'trail-sign-outline' },
-  { key: 'outerwear', label: 'Outerwear', icon: 'jacket-outline' },
+  { key: 'outerwear', label: 'Outerwear', icon: 'layers-outline' },
   { key: 'shoes', label: 'Shoes', icon: 'footsteps-outline' },
   { key: 'accessories', label: 'Accessories', icon: 'watch-outline' },
 ];
 
 export default function WardrobeScreen() {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   const [selectedCategory, setSelectedCategory] = useState<ClothingCategory | 'all'>('all');
   const [rebuilding, setRebuilding] = useState(false);
   const wardrobeItems = useWardrobe();
@@ -63,18 +65,18 @@ export default function WardrobeScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'owned': return THEME.success;
-      case 'purchased': return THEME.primary;
-      case 'recommended': return THEME.textMuted;
-      default: return THEME.textMuted;
+      case 'owned': return theme.success;
+      case 'purchased': return theme.primary;
+      case 'recommended': return theme.textMuted;
+      default: return theme.textMuted;
     }
   };
 
   const renderWardrobeItem = ({ item }: { item: WardrobeItem }) => (
     <PressScale style={[styles.itemCard, { width: cardWidth }]}>
       <View style={styles.itemHeader}>
-        <View style={[styles.categoryBadge, { backgroundColor: THEME.primaryMuted }]}>
-          <Text style={[styles.categoryBadgeText, { color: THEME.primary }]}>
+        <View style={[styles.categoryBadge, { backgroundColor: theme.primaryMuted }]}>
+          <Text style={[styles.categoryBadgeText, { color: theme.primary }]}>
             PHASE {item.priorityPhase ?? 1}
           </Text>
         </View>
@@ -85,7 +87,7 @@ export default function WardrobeScreen() {
             color={getStatusColor(item.status)} 
           />
           <PressScale onPress={() => removeWardrobeItem(item.id)} hitSlop={10} style={{ marginLeft: 8 }}>
-            <Ionicons name="trash-outline" size={16} color={THEME.danger} />
+            <Ionicons name="trash-outline" size={16} color={theme.danger} />
           </PressScale>
         </View>
       </View>
@@ -96,7 +98,7 @@ export default function WardrobeScreen() {
         </View>
       ) : (
         <View style={[styles.imageContainer, styles.imagePlaceholder]}>
-          <Ionicons name="image-outline" size={32} color={THEME.border} />
+          <Ionicons name="image-outline" size={32} color={theme.border} />
         </View>
       )}
 
@@ -121,18 +123,18 @@ export default function WardrobeScreen() {
     <PressScale 
       style={[
         styles.filterChip,
-        selectedCategory === item.key && { backgroundColor: THEME.primary }
+        selectedCategory === item.key && { backgroundColor: theme.primary }
       ]}
       onPress={() => setSelectedCategory(item.key)}
     >
       <Ionicons 
         name={item.icon as any} 
         size={16} 
-        color={selectedCategory === item.key ? THEME.onPrimary : THEME.textMuted} 
+        color={selectedCategory === item.key ? theme.onPrimary : theme.textMuted} 
       />
       <Text style={[
         styles.filterChipText,
-        { color: selectedCategory === item.key ? THEME.onPrimary : THEME.textMuted }
+        { color: selectedCategory === item.key ? theme.onPrimary : theme.textMuted }
       ]}>
         {item.label}
       </Text>
@@ -146,8 +148,8 @@ export default function WardrobeScreen() {
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>My Wardrobe</Text>
-            <PressScale style={styles.addButton}>
-              <Ionicons name="add" size={24} color={THEME.primary} />
+            <PressScale style={styles.addButton} onPress={() => router.push('/setup')}>
+              <Ionicons name="add" size={24} color={theme.primary} />
             </PressScale>
           </View>
 
@@ -166,18 +168,18 @@ export default function WardrobeScreen() {
                 <PressScale 
                   style={[
                     styles.filterChip,
-                    selectedCategory === 'all' && { backgroundColor: THEME.primary }
+                    selectedCategory === 'all' && { backgroundColor: theme.primary }
                   ]}
                   onPress={() => setSelectedCategory('all')}
                 >
                   <Ionicons 
                     name="apps-outline" 
                     size={16} 
-                    color={selectedCategory === 'all' ? THEME.onPrimary : THEME.textMuted} 
+                    color={selectedCategory === 'all' ? theme.onPrimary : theme.textMuted} 
                   />
                   <Text style={[
                     styles.filterChipText,
-                    { color: selectedCategory === 'all' ? THEME.onPrimary : THEME.textMuted }
+                    { color: selectedCategory === 'all' ? theme.onPrimary : theme.textMuted }
                   ]}>
                     All
                   </Text>
@@ -246,7 +248,7 @@ export default function WardrobeScreen() {
                 variant="primary"
                 loading={rebuilding}
                 onPress={handleGenerateWardrobe}
-                icon={<Ionicons name="sparkles" size={18} color={THEME.onPrimary} />}
+                icon={<Ionicons name="sparkles" size={18} color={theme.onPrimary} />}
                 style={styles.generateButton}
               />
             </SlideUp>
@@ -258,7 +260,7 @@ export default function WardrobeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: Layout.spacing.lg,
@@ -273,13 +275,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '800',
-    color: THEME.text,
+    color: theme.text,
   },
   addButton: {
     width: 44,
     height: 44,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.primaryMuted,
+    backgroundColor: theme.primaryMuted,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -299,9 +301,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Layout.spacing.md,
     paddingVertical: Layout.spacing.sm,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: THEME.border,
+    borderColor: theme.border,
   },
   filterChipText: {
     fontSize: 13,
@@ -319,12 +321,12 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 20,
     fontWeight: '800',
-    color: THEME.primary,
+    color: theme.primary,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: THEME.textMuted,
+    color: theme.textMuted,
     fontWeight: '500',
   },
   itemsList: {
@@ -335,11 +337,11 @@ const styles = StyleSheet.create({
     marginBottom: Layout.spacing.md,
   },
   itemCard: {
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     borderRadius: Layout.borderRadius.md,
     padding: Layout.spacing.md,
     borderWidth: 1,
-    borderColor: THEME.border,
+    borderColor: theme.border,
   },
   itemHeader: {
     flexDirection: 'row',
@@ -367,7 +369,7 @@ const styles = StyleSheet.create({
     borderRadius: Layout.borderRadius.sm,
     overflow: 'hidden',
     marginBottom: Layout.spacing.sm,
-    backgroundColor: THEME.surfaceElevated,
+    backgroundColor: theme.surfaceElevated,
   },
   imagePlaceholder: {
     justifyContent: 'center',
@@ -380,17 +382,17 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.text,
+    color: theme.text,
     marginBottom: 4,
   },
   itemDetails: {
     fontSize: 12,
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
     marginBottom: 4,
   },
   itemBudget: {
     fontSize: 12,
-    color: THEME.textMuted,
+    color: theme.textMuted,
     fontWeight: '500',
     marginBottom: Layout.spacing.sm,
   },
@@ -401,27 +403,27 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    backgroundColor: THEME.primary,
+    backgroundColor: theme.primary,
     paddingVertical: 6,
     borderRadius: 4,
     alignItems: 'center',
   },
   actionButtonText: {
-    color: THEME.onPrimary,
+    color: theme.onPrimary,
     fontSize: 11,
     fontWeight: '600',
   },
   actionButtonSecondary: {
     flex: 1,
-    backgroundColor: THEME.surfaceElevated,
+    backgroundColor: theme.surfaceElevated,
     paddingVertical: 6,
     borderRadius: 4,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: THEME.border,
+    borderColor: theme.border,
   },
   actionButtonTextSecondary: {
-    color: THEME.text,
+    color: theme.text,
     fontSize: 11,
     fontWeight: '600',
   },

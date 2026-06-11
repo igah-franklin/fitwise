@@ -19,7 +19,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PressScale } from '@/components/ui/Motion';
-import { THEME } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
 import {
   getProfile,
@@ -60,6 +60,8 @@ const MEASUREMENT_FIELDS: {
 ];
 
 export default function SetupScreen() {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   const params = useLocalSearchParams<{ occasion?: string }>();
   const existing = getProfile();
 
@@ -188,9 +190,9 @@ export default function SetupScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingWrap}>
           <View style={styles.loadingIcon}>
-            <Ionicons name="sparkles" size={36} color={THEME.primary} />
+            <Ionicons name="sparkles" size={36} color={theme.primary} />
           </View>
-          <ActivityIndicator size="large" color={THEME.primary} style={styles.loadingSpinner} />
+          <ActivityIndicator size="large" color={theme.primary} style={styles.loadingSpinner} />
           <Text style={styles.loadingTitle}>Building your wardrobe</Text>
           <Text style={styles.loadingText}>
             Matching pieces to your measurements, style and budget…
@@ -205,7 +207,7 @@ export default function SetupScreen() {
       {/* Header */}
       <View style={styles.header}>
         <PressScale style={styles.headerButton} onPress={handleBack} hitSlop={10}>
-          <Ionicons name={step === 0 ? 'close' : 'chevron-back'} size={24} color={THEME.text} />
+          <Ionicons name={step === 0 ? 'close' : 'chevron-back'} size={24} color={theme.text} />
         </PressScale>
         <Text style={styles.stepCount}>
           Step {step + 1} of {STEPS.length}
@@ -220,7 +222,7 @@ export default function SetupScreen() {
             key={i}
             style={[
               styles.progressSegment,
-              { backgroundColor: i <= step ? THEME.primary : THEME.surfaceElevated },
+              { backgroundColor: i <= step ? theme.primary : theme.surfaceElevated },
             ]}
           />
         ))}
@@ -279,7 +281,7 @@ export default function SetupScreen() {
                       <Ionicons
                         name={opt.icon as any}
                         size={18}
-                        color={active ? THEME.onPrimary : THEME.primary}
+                        color={active ? theme.onPrimary : theme.primary}
                       />
                       <Text style={[styles.styleChipText, active && styles.styleChipTextActive]}>
                         {opt.label}
@@ -304,7 +306,7 @@ export default function SetupScreen() {
                       <Ionicons
                         name={active ? 'checkmark' : (opt.icon as any)}
                         size={16}
-                        color={active ? THEME.primary : THEME.textMuted}
+                        color={active ? theme.primary : theme.textMuted}
                       />
                       <Text
                         style={[
@@ -336,13 +338,13 @@ export default function SetupScreen() {
                         <View
                           style={[
                             styles.budgetIcon,
-                            active && { backgroundColor: THEME.primary },
+                            active && { backgroundColor: theme.primary },
                           ]}
                         >
                           <Ionicons
                             name={opt.icon as any}
                             size={22}
-                            color={active ? THEME.onPrimary : THEME.primary}
+                            color={active ? theme.onPrimary : theme.primary}
                           />
                         </View>
                         <View style={styles.budgetInfo}>
@@ -355,7 +357,7 @@ export default function SetupScreen() {
                         <Ionicons
                           name={active ? 'radio-button-on' : 'radio-button-off'}
                           size={22}
-                          color={active ? THEME.primary : THEME.textMuted}
+                          color={active ? theme.primary : theme.textMuted}
                         />
                       </View>
                     </Card>
@@ -381,7 +383,7 @@ export default function SetupScreen() {
                       <Ionicons
                         name={active ? 'checkmark-circle' : 'ellipse-outline'}
                         size={18}
-                        color={active ? THEME.primary : THEME.textMuted}
+                        color={active ? theme.primary : theme.textMuted}
                       />
                       <Text
                         style={[
@@ -415,7 +417,7 @@ export default function SetupScreen() {
                       </>
                     ) : (
                       <View style={styles.photoEmpty}>
-                        <Ionicons name="camera-outline" size={28} color={THEME.primary} />
+                        <Ionicons name="camera-outline" size={28} color={theme.primary} />
                         <Text style={styles.photoSlotLabel}>
                           {slot === 'front' ? 'Front photo' : 'Side photo'}
                         </Text>
@@ -430,7 +432,7 @@ export default function SetupScreen() {
 
           {step === 4 && (
             <View style={styles.photoNote}>
-              <Ionicons name="lock-closed-outline" size={14} color={THEME.textMuted} />
+              <Ionicons name="lock-closed-outline" size={14} color={theme.textMuted} />
               <Text style={styles.photoNoteText}>
                 Photos stay on your device and are only used to preview how outfits look on you.
               </Text>
@@ -454,7 +456,7 @@ export default function SetupScreen() {
             <Ionicons
               name={isLastStep ? 'sparkles' : 'arrow-forward'}
               size={18}
-              color={THEME.onPrimary}
+              color={theme.onPrimary}
             />
           }
         />
@@ -463,10 +465,10 @@ export default function SetupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.background,
+    backgroundColor: theme.background,
   },
   flex: {
     flex: 1,
@@ -488,7 +490,7 @@ const styles = StyleSheet.create({
   stepCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
   },
   progress: {
     flexDirection: 'row',
@@ -508,12 +510,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '800',
-    color: THEME.text,
+    color: theme.text,
     marginBottom: Layout.spacing.xs,
   },
   subtitle: {
     fontSize: 15,
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
     lineHeight: 22,
     marginBottom: Layout.spacing.xl,
   },
@@ -531,7 +533,7 @@ const styles = StyleSheet.create({
   groupLabel: {
     fontSize: 14,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
     marginBottom: Layout.spacing.md,
   },
   groupLabelSpaced: {
@@ -549,21 +551,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: Layout.spacing.md,
     paddingVertical: Layout.spacing.sm + 2,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     borderWidth: 1.5,
-    borderColor: THEME.border,
+    borderColor: theme.border,
   },
   styleChipActive: {
-    backgroundColor: THEME.primary,
-    borderColor: THEME.primary,
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   styleChipText: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.text,
+    color: theme.text,
   },
   styleChipTextActive: {
-    color: THEME.onPrimary,
+    color: theme.onPrimary,
   },
   styleChipOutline: {
     flexDirection: 'row',
@@ -572,21 +574,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: Layout.spacing.md,
     paddingVertical: Layout.spacing.sm,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: THEME.border,
+    borderColor: theme.border,
   },
   styleChipOutlineActive: {
-    borderColor: THEME.primary,
-    backgroundColor: THEME.primaryMuted,
+    borderColor: theme.primary,
+    backgroundColor: theme.primaryMuted,
   },
   styleChipOutlineText: {
     fontSize: 13,
     fontWeight: '600',
-    color: THEME.textMuted,
+    color: theme.textMuted,
   },
   styleChipOutlineTextActive: {
-    color: THEME.primary,
+    color: theme.primary,
   },
   // Budget
   budgetList: {
@@ -594,10 +596,10 @@ const styles = StyleSheet.create({
   },
   budgetCard: {
     borderWidth: 1.5,
-    borderColor: THEME.border,
+    borderColor: theme.border,
   },
   budgetCardActive: {
-    borderColor: THEME.primary,
+    borderColor: theme.primary,
   },
   budgetRow: {
     flexDirection: 'row',
@@ -608,7 +610,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.primaryMuted,
+    backgroundColor: theme.primaryMuted,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -623,16 +625,16 @@ const styles = StyleSheet.create({
   budgetLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
   },
   budgetRange: {
     fontSize: 12,
     fontWeight: '600',
-    color: THEME.primary,
+    color: theme.primary,
   },
   budgetDescription: {
     fontSize: 13,
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
     marginTop: 2,
     lineHeight: 18,
   },
@@ -646,9 +648,9 @@ const styles = StyleSheet.create({
     aspectRatio: 3 / 4,
     borderRadius: Layout.borderRadius.lg,
     overflow: 'hidden',
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     borderWidth: 1.5,
-    borderColor: THEME.border,
+    borderColor: theme.border,
     borderStyle: 'dashed',
   },
   photoEmpty: {
@@ -660,12 +662,12 @@ const styles = StyleSheet.create({
   photoSlotLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.text,
+    color: theme.text,
     marginTop: Layout.spacing.sm,
   },
   photoSlotHint: {
     fontSize: 12,
-    color: THEME.textMuted,
+    color: theme.textMuted,
   },
   photoImage: {
     width: '100%',
@@ -697,7 +699,7 @@ const styles = StyleSheet.create({
   photoNoteText: {
     flex: 1,
     fontSize: 12,
-    color: THEME.textMuted,
+    color: theme.textMuted,
     lineHeight: 18,
   },
   // Footer
@@ -706,7 +708,7 @@ const styles = StyleSheet.create({
     paddingTop: Layout.spacing.md,
     paddingBottom: Layout.spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: THEME.divider,
+    borderTopColor: theme.divider,
     gap: Layout.spacing.sm,
   },
   skipPhotos: {
@@ -716,7 +718,7 @@ const styles = StyleSheet.create({
   skipPhotosText: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.textMuted,
+    color: theme.textMuted,
   },
   // Loading
   loadingWrap: {
@@ -729,7 +731,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.primaryMuted,
+    backgroundColor: theme.primaryMuted,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Layout.spacing.lg,
@@ -740,12 +742,12 @@ const styles = StyleSheet.create({
   loadingTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
     marginBottom: Layout.spacing.sm,
   },
   loadingText: {
     fontSize: 14,
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },

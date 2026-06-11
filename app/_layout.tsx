@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
-import { THEME } from '@/lib/theme';
+import { ThemeProvider, useTheme } from '@/lib/theme';
 import { hydrateProfile } from '@/lib/profile';
 import { hydrateWardrobe } from '@/lib/wardrobe';
 
@@ -14,7 +14,8 @@ const OnboardingContext = createContext<boolean | null>(null);
 
 export const useOnboarded = () => useContext(OnboardingContext);
 
-export default function RootLayout() {
+function RootApp() {
+  const { theme, themeName } = useTheme();
   const [isOnboarded, setIsOnboarded] = useState<boolean | null>(null);
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -48,19 +49,17 @@ export default function RootLayout() {
   }, [fontsLoaded, isOnboarded]);
 
   // Hold the splash screen until fonts and onboarding state are both resolved.
-  // This prevents any screen from rendering before we know where to route,
-  // which is what caused the onboarding flicker.
   if (!fontsLoaded || isOnboarded === null) {
     return null;
   }
 
   return (
     <OnboardingContext.Provider value={isOnboarded}>
-      <StatusBar style="dark" />
+      <StatusBar style={themeName === 'dark' ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: THEME.background },
+          contentStyle: { backgroundColor: theme.background },
         }}
       >
         <Stack.Screen name="onboarding" />
@@ -70,5 +69,13 @@ export default function RootLayout() {
         <Stack.Screen name="+not-found" />
       </Stack>
     </OnboardingContext.Provider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <RootApp />
+    </ThemeProvider>
   );
 }
