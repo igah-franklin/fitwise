@@ -6,7 +6,7 @@
 // to by `generateOutfit`.
 
 import type { Outfit, OutfitItem, OutfitOccasion } from './types';
-import { type CatalogKey, resolvePiece, getWardrobe } from './wardrobe';
+import { getWardrobe } from './wardrobe';
 import { getProfile } from './profile';
 
 // ─── Occasion metadata + recipes ─────────────────────────────────
@@ -28,19 +28,6 @@ export function occasionLabel(occasion: OutfitOccasion): string {
   return OCCASION_META[occasion]?.label ?? occasion;
 }
 
-// Which catalog pieces each occasion assembles, head-to-toe.
-const RECIPES: Record<OutfitOccasion, CatalogKey[]> = {
-  casual: ['whiteTee', 'darkDenim', 'whiteSneakers', 'watch'],
-  work: ['whiteOxford', 'navyChinos', 'brownLoafers', 'leatherBelt'],
-  'date-night': ['navyBlazer', 'whiteTee', 'darkDenim', 'chelseaBoots'],
-  'night-out': ['bomberJacket', 'navyTee', 'darkDenim', 'chelseaBoots'],
-  travel: ['chambrayShirt', 'navyChinos', 'whiteSneakers', 'watch'],
-  wedding: ['navyBlazer', 'whiteOxford', 'greyTrousers', 'brownLoafers'],
-  'business-meeting': ['navyBlazer', 'whiteOxford', 'greyTrousers', 'leatherBelt'],
-  vacation: ['chambrayShirt', 'whiteTee', 'whiteSneakers', 'watch'],
-  errands: ['navyTee', 'darkDenim', 'whiteSneakers'],
-  gym: ['whiteTee', 'darkDenim', 'whiteSneakers'],
-};
 
 const GENERATED_NAMES: Record<OutfitOccasion, string> = {
   casual: 'Easy Weekend',
@@ -69,25 +56,20 @@ const PREVIEW_BY_OCCASION: Record<OutfitOccasion, string> = {
 };
 
 function buildItems(occasion: OutfitOccasion, outfitId: string): OutfitItem[] {
-  const allOwned = getWardrobe().filter(w => w.status === 'owned' || w.status === 'purchased');
+  const wardrobe = getWardrobe();
+  // If no wardrobe, return empty
+  if (wardrobe.length === 0) return [];
   
-  return RECIPES[occasion].map((key) => {
-    let wardrobeItem = resolvePiece(key);
-    
-    // If the recipe piece isn't owned, try to substitute an owned item of the same category
-    if (wardrobeItem.status !== 'owned' && wardrobeItem.status !== 'purchased') {
-      const substitute = allOwned.find(w => w.category === wardrobeItem.category);
-      if (substitute) {
-        wardrobeItem = substitute;
-      }
-    }
+  // Pick 3-4 random items from the user's actual generated wardrobe
+  const count = Math.min(wardrobe.length, Math.floor(Math.random() * 2) + 3);
+  const shuffled = [...wardrobe].sort(() => 0.5 - Math.random());
+  const selected = shuffled.slice(0, count);
 
-    return {
-      id: `${outfitId}-${wardrobeItem.id}`,
-      wardrobeItemId: wardrobeItem.id,
-      wardrobeItem,
-    };
-  });
+  return selected.map((wardrobeItem) => ({
+    id: `${outfitId}-${wardrobeItem.id}`,
+    wardrobeItemId: wardrobeItem.id,
+    wardrobeItem,
+  }));
 }
 
 /**
@@ -197,13 +179,16 @@ export async function generateOutfit(occasion: OutfitOccasion): Promise<Outfit> 
     if (res.data) {
       // Re-hydrate the items from the returned populated object, or just fetch again
       await hydrateOutfits();
-      const newOutfit = store.find((o: any) => o._id === res.data._id) || mockOutfit;
-      return newOutfit;
+      const newOutfit = store.find((o: any) => o._id === res.data._id);
+      return newOutfit || res.data;
     }
-  } catch (e) { console.error('Failed to save outfit to backend', e) }
-
-  store.unshift(mockOutfit);
-  return mockOutfit;
+    throw new Error('No data returned from backend');
+  } catch (e: any) {
+    console.error('Failed to save outfit to backend', e.response?.data || e);
+    // Throw the readable backend error up to the UI so it can alert the user
+    const backendMessage = e.response?.data?.message || e.message || 'Failed to generate outfit';
+    throw new Error(backendMessage);
+  }
 }
 
 export function updateOutfitFeedback(id: string, feedback: 'like' | 'dislike'): void {

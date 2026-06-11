@@ -70,17 +70,19 @@ export default function OutfitDetailsScreen() {
     setSaved((prev) => !prev);
   };
 
-  const handleRegenerate = () => {
+  const handleRegenerate = async () => {
     setRegenerating(true);
-    // Simulate AI re-generation, then swap the screen to the new look.
-    setTimeout(() => {
-      const next = generateOutfit(outfit.occasion);
+    try {
+      const next = await generateOutfit(outfit.occasion);
       setRegenerating(false);
       setSaved(false);
       setFeedback(undefined);
       setOutfit(next);
       router.setParams({ id: next.id });
-    }, 1600);
+    } catch (e: any) {
+      setRegenerating(false);
+      Alert.alert('Generation Error', e.message);
+    }
   };
 
   const handleFeedback = (type: 'like' | 'dislike') => {

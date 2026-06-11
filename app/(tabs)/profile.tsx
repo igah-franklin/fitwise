@@ -60,10 +60,10 @@ export default function ProfileScreen() {
     toShop: wardrobe.filter((i) => i.status === 'recommended').length,
   };
 
-  const photoCount = profile ? [profile.photos.front, profile.photos.side].filter(Boolean).length : 0;
-  const styleValue = profile
+  const photoCount = profile ? [profile.photos?.front, profile.photos?.side].filter(Boolean).length : 0;
+  const styleValue = profile && profile.primaryStyle
     ? styleLabel(profile.primaryStyle) +
-      (profile.secondaryStyles.length ? `, +${profile.secondaryStyles.length} more` : '')
+      (profile.secondaryStyles?.length ? `, +${profile.secondaryStyles.length} more` : '')
     : 'Not set';
 
   const openSetup = () => router.push('/setup');
@@ -121,7 +121,7 @@ export default function ProfileScreen() {
               await clearWardrobe();
               clearOutfits();
               await AsyncStorage.removeItem('onboarded');
-              router.replace('/onboarding');
+              await signOut(); // This will trigger AuthGuard to redirect to /login
             } catch (error) {
               Alert.alert('Error', 'Failed to delete account. Please try again later.');
             }

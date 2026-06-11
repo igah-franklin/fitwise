@@ -44,14 +44,15 @@ export default function OutfitsScreen() {
     }, []),
   );
 
-  const handleConfirmGenerate = () => {
+  const handleConfirmGenerate = async () => {
     setModalVisible(false);
-    // Simulate slight loading feel, though generation is synchronous
-    setTimeout(() => {
-      const newOutfit = generateOutfit(selectedOccasion);
+    try {
+      const newOutfit = await generateOutfit(selectedOccasion);
       setOutfits(getOutfits());
       router.push(`/outfit/${newOutfit.id}`);
-    }, 300);
+    } catch (e: any) {
+      alert(`Generation Error: ${e.message}`);
+    }
   };
 
   const handleRemoveOutfit = (id: string) => {

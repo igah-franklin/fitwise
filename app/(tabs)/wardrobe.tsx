@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, FlatList, Dimensions, Image } from 'react-native';
+import { View, StyleSheet, FlatList, Dimensions, Image as RNImage } from 'react-native';
+import Animated, { FadeIn, FadeOut, withRepeat, withTiming, useSharedValue, useAnimatedStyle, Easing } from 'react-native-reanimated';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Screen } from '@/components/ui/Screen';
@@ -24,6 +26,40 @@ const categories: { key: ClothingCategory; label: string; icon: string }[] = [
   { key: 'shoes', label: 'Shoes', icon: 'footsteps-outline' },
   { key: 'accessories', label: 'Accessories', icon: 'watch-outline' },
 ];
+
+function SkeletonImage({ uri, style, theme }: { uri: string, style: any, theme: any }) {
+  const [loaded, setLoaded] = useState(false);
+  const opacity = useSharedValue(0.5);
+
+  React.useEffect(() => {
+    if (!loaded) {
+      opacity.value = withRepeat(
+        withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        true
+      );
+    }
+  }, [loaded]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return (
+    <View style={style}>
+      {!loaded && (
+        <Animated.View style={[StyleSheet.absoluteFill, animatedStyle, { backgroundColor: theme.border, borderRadius: style.borderRadius }]} />
+      )}
+      <Image
+        source={{ uri }}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        transition={300}
+        onLoadEnd={() => setLoaded(true)}
+      />
+    </View>
+  );
+}
 
 export default function WardrobeScreen() {
   const { theme } = useTheme();
@@ -86,16 +122,14 @@ export default function WardrobeScreen() {
             size={18} 
             color={getStatusColor(item.status)} 
           />
-          <PressScale onPress={() => removeWardrobeItem(item.id)} hitSlop={10} style={{ marginLeft: 8 }}>
+          <PressScale onPress={() => removeWardrobeItem((item as any)._id || item.id)} hitSlop={10} style={{ marginLeft: 8 }}>
             <Ionicons name="trash-outline" size={16} color={theme.danger} />
           </PressScale>
         </View>
       </View>
       
       {item.imageUrl ? (
-        <View style={styles.imageContainer}>
-          <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
-        </View>
+        <SkeletonImage uri={item.imageUrl} style={styles.imageContainer} theme={theme} />
       ) : (
         <View style={[styles.imageContainer, styles.imagePlaceholder]}>
           <Ionicons name="image-outline" size={32} color={theme.border} />
@@ -108,11 +142,11 @@ export default function WardrobeScreen() {
       
       <View style={styles.itemActions}>
         {item.status !== 'owned' && (
-           <PressScale onPress={() => markAsOwned(item.id)} style={styles.actionButton}>
+           <PressScale onPress={() => markAsOwned((item as any)._id || item.id)} style={styles.actionButton}>
               <Text style={styles.actionButtonText}>Own it</Text>
            </PressScale>
         )}
-        <PressScale onPress={() => swapItem(item.id)} style={styles.actionButtonSecondary}>
+        <PressScale onPress={() => swapItem((item as any)._id || item.id)} style={styles.actionButtonSecondary}>
            <Text style={styles.actionButtonTextSecondary}>Swap</Text>
         </PressScale>
       </View>
@@ -224,7 +258,7 @@ export default function WardrobeScreen() {
                 <FlatList
                   data={filteredItems}
                   renderItem={renderWardrobeItem}
-                  keyExtractor={(item) => item.id}
+                  keyExtractor={(item, index) => (item as any)._id || item.id || index.toString()}
                   numColumns={2}
                   columnWrapperStyle={styles.row}
                   contentContainerStyle={styles.itemsList}

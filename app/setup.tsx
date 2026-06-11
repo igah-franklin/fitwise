@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Animated, { FadeIn, FadeOut, withRepeat, withTiming, useSharedValue, useAnimatedStyle, Easing } from 'react-native-reanimated';
 import {
   View,
   StyleSheet,
@@ -51,13 +52,67 @@ const MEASUREMENT_FIELDS: {
   placeholder: string;
   required?: boolean;
 }[] = [
-  { key: 'height', label: 'Height', unit: 'cm', placeholder: '178', required: true },
-  { key: 'weight', label: 'Weight', unit: 'kg', placeholder: '74', required: true },
-  { key: 'chest', label: 'Chest', unit: 'cm', placeholder: '100', required: true },
-  { key: 'waist', label: 'Waist', unit: 'cm', placeholder: '82', required: true },
-  { key: 'shoulderWidth', label: 'Shoulders', unit: 'cm', placeholder: '46' },
-  { key: 'inseam', label: 'Inseam', unit: 'cm', placeholder: '80' },
-];
+    { key: 'height', label: 'Height', unit: 'cm', placeholder: '178', required: true },
+    { key: 'weight', label: 'Weight', unit: 'kg', placeholder: '74', required: true },
+    { key: 'chest', label: 'Chest', unit: 'cm', placeholder: '100', required: true },
+    { key: 'waist', label: 'Waist', unit: 'cm', placeholder: '82', required: true },
+    { key: 'shoulderWidth', label: 'Shoulders', unit: 'cm', placeholder: '46' },
+    { key: 'inseam', label: 'Inseam', unit: 'cm', placeholder: '80' },
+  ];
+
+function GeneratingWardrobeScreen({ theme }: { theme: any }) {
+  const styles = makeStyles(theme);
+  const [stepIndex, setStepIndex] = useState(0);
+  const steps = [
+    'Analyzing style profile...',
+    'Curating personalized pieces...',
+    'Generating premium product shots...',
+    'Finalizing your wardrobe...',
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStepIndex((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const pulse = useSharedValue(1);
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withTiming(1.2, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
+  }, []);
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse.value }],
+    opacity: 1.5 - pulse.value,
+  }));
+
+  return (
+    <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <Animated.View style={[styles.pulseCircle, { backgroundColor: theme.primary }, pulseStyle]} />
+      <View style={[styles.iconContainer, { backgroundColor: theme.card }]}>
+        <Ionicons name="sparkles" size={48} color={theme.primary} />
+      </View>
+
+      <Animated.Text entering={FadeIn.duration(500)} style={styles.loadingTitle}>
+        Building your wardrobe
+      </Animated.Text>
+
+      <Animated.Text
+        key={stepIndex}
+        entering={FadeIn.duration(800)}
+        exiting={FadeOut.duration(400)}
+        style={styles.loadingText}
+      >
+        {steps[stepIndex]}
+      </Animated.Text>
+    </SafeAreaView>
+  );
+}
 
 export default function SetupScreen() {
   const { theme } = useTheme();
@@ -174,32 +229,19 @@ export default function SetupScreen() {
 
       const occasion = params.occasion as OutfitOccasion | undefined;
       if (occasion) {
-        const outfit = generateOutfit(occasion);
+        const outfit = await generateOutfit(occasion);
         router.replace(`/outfit/${outfit.id}`);
       } else {
         router.replace('/(tabs)/wardrobe');
       }
-    } catch (error) {
+    } catch (error: any) {
       setSubmitting(false);
-      Alert.alert('Something went wrong', 'Please try generating your wardrobe again.');
+      Alert.alert('Something went wrong', error.message || 'Please try generating your wardrobe again.');
     }
   };
 
   if (submitting) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingWrap}>
-          <View style={styles.loadingIcon}>
-            <Ionicons name="sparkles" size={36} color={theme.primary} />
-          </View>
-          <ActivityIndicator size="large" color={theme.primary} style={styles.loadingSpinner} />
-          <Text style={styles.loadingTitle}>Building your wardrobe</Text>
-          <Text style={styles.loadingText}>
-            Matching pieces to your measurements, style and budget…
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
+    return <GeneratingWardrobeScreen theme={theme} />;
   }
 
   return (
@@ -750,5 +792,29 @@ const makeStyles = (theme: any) => StyleSheet.create({
     color: theme.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  pulseCircle: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    top: '40%', // Adjust to be behind icon
+    left: '50%',
+    marginLeft: -80,
+    marginTop: -80,
+    opacity: 0.1,
+  },
+  iconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Layout.spacing.xl,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 8,
   },
 });
