@@ -55,7 +55,7 @@ export interface UserPhoto {
 
 export interface WardrobeItem {
   id: string;
-  userId: string;
+  userId?: string;
   name: string;
   category: ClothingCategory;
   subcategory: string;
@@ -83,7 +83,7 @@ export type ItemStatus = 'recommended' | 'owned' | 'purchased' | 'replaced';
 
 export interface Outfit {
   id: string;
-  userId: string;
+  userId?: string;
   name: string;
   occasion: OutfitOccasion;
   items: OutfitItem[];

@@ -99,7 +99,6 @@ function buildPiece(key: CatalogKey, tier: BudgetRange, status: WardrobeItem['st
   const max = round5(piece.base[1] * factor);
   return {
     id: `w-${key}`,
-    userId: 'user1',
     name: piece.name,
     category: piece.category,
     subcategory: piece.subcategory,
@@ -131,6 +130,8 @@ const STYLE_WARDROBE: Record<StyleType, CatalogKey[]> = {
 
 // ─── Store ───────────────────────────────────────────────────────
 
+import api from './api';
+
 let wardrobe: WardrobeItem[] = [];
 let hydrated = false;
 const listeners = new Set<() => void>();
@@ -138,17 +139,21 @@ const emit = () => listeners.forEach((l) => l());
 
 async function persist() {
   try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(wardrobe));
-  } catch {
-    // keep in-memory copy
+    await api.post('/style/wardrobe', { items: wardrobe });
+  } catch (error) {
+    console.error('Failed to persist wardrobe', error);
   }
 }
 
 export async function hydrateWardrobe(): Promise<WardrobeItem[]> {
   if (hydrated) return wardrobe;
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    wardrobe = raw ? (JSON.parse(raw) as WardrobeItem[]) : [];
+    const res = await api.get('/style/wardrobe');
+    if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+      wardrobe = res.data;
+    } else {
+      wardrobe = [];
+    }
   } catch {
     wardrobe = [];
   }
@@ -185,32 +190,37 @@ export async function buildWardrobe(opts: {
   });
   hydrated = true;
   await persist();
+  // Fetch again to get the real MongoDB _ids
+  await hydrateWardrobe();
   emit();
   return wardrobe;
 }
 
 export async function clearWardrobe(): Promise<void> {
   wardrobe = [];
-  try {
-    await AsyncStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // ignore
-  }
+  hydrated = false;
   emit();
 }
 
 export async function markAsOwned(id: string): Promise<void> {
-  const item = wardrobe.find((w) => w.id === id);
+  const item = wardrobe.find((w) => w.id === id || (w as any)._id === id);
   if (item) {
     item.status = 'owned';
-    await persist();
+    try {
+      await api.put(`/style/wardrobe/${item.id.replace('w-', '')}`, { status: 'owned' });
+    } catch (e) { console.error(e) }
     emit();
   }
 }
 
 export async function removeWardrobeItem(id: string): Promise<void> {
-  wardrobe = wardrobe.filter((w) => w.id !== id);
-  await persist();
+  const item = wardrobe.find((w) => w.id === id || (w as any)._id === id);
+  wardrobe = wardrobe.filter((w) => w.id !== id && (w as any)._id !== id);
+  if (item) {
+    try {
+      await api.delete(`/style/wardrobe/${item.id.replace('w-', '')}`);
+    } catch (e) { console.error(e) }
+  }
   emit();
 }
 

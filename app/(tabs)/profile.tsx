@@ -13,6 +13,8 @@ import { Layout } from '@/constants/Layout';
 import { useProfile, measurementsSummary, styleLabel, clearProfile } from '@/lib/profile';
 import { useWardrobe, clearWardrobe } from '@/lib/wardrobe';
 import { getOutfits, clearOutfits } from '@/lib/outfits';
+import { useAuth } from '@/lib/AuthContext';
+import api from '@/lib/api';
 
 interface ProfileSectionProps {
   title: string;
@@ -50,6 +52,7 @@ export default function ProfileScreen() {
   const styles = makeStyles(theme);
   const profile = useProfile();
   const wardrobe = useWardrobe();
+  const { user, signOut } = useAuth();
 
   const userStats = {
     wardrobeItems: wardrobe.length,
@@ -90,8 +93,12 @@ export default function ProfileScreen() {
         { 
           text: 'Sign Out', 
           style: 'destructive',
-          onPress: () => {
-            Alert.alert('Signed Out', 'You have been signed out successfully.');
+          onPress: async () => {
+            await signOut();
+            await clearProfile();
+            await clearWardrobe();
+            clearOutfits();
+            await AsyncStorage.removeItem('onboarded');
           }
         },
       ]
@@ -108,11 +115,16 @@ export default function ProfileScreen() {
           text: 'Delete', 
           style: 'destructive',
           onPress: async () => {
-            await clearProfile();
-            await clearWardrobe();
-            clearOutfits();
-            await AsyncStorage.removeItem('onboarded');
-            router.replace('/onboarding');
+            try {
+              await api.delete('/auth/me');
+              await clearProfile();
+              await clearWardrobe();
+              clearOutfits();
+              await AsyncStorage.removeItem('onboarded');
+              router.replace('/onboarding');
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete account. Please try again later.');
+            }
           }
         },
       ]
@@ -140,8 +152,9 @@ export default function ProfileScreen() {
                     <Ionicons name="person" size={32} color={theme.primary} />
                   </View>
                   <View style={styles.userDetails}>
-                    <Text style={styles.userName}>Style Champion</Text>
-                    <Text style={styles.userEmail}>
+                    <Text style={styles.userName}>{user?.name || 'Style Champion'}</Text>
+                    <Text style={styles.userEmail}>{user?.email || 'No email provided'}</Text>
+                    <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 4 }}>
                       {profile ? `${styleLabel(profile.primaryStyle)} style` : 'Setup not complete'}
                     </Text>
                   </View>

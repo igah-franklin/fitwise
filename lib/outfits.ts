@@ -118,34 +118,47 @@ function makeOutfit(
   };
 }
 
-const hoursAgo = (h: number) => new Date(Date.now() - h * 60 * 60 * 1000).toISOString();
+import api from './api';
 
-const store: Outfit[] = [
-  makeOutfit('seed-casual-friday', 'work', 'Casual Friday', hoursAgo(2), PREVIEW_BY_OCCASION.work),
-  makeOutfit('seed-date-night', 'date-night', 'Date Night', hoursAgo(24), PREVIEW_BY_OCCASION['date-night']),
-  makeOutfit('seed-business', 'business-meeting', 'Business Meeting', hoursAgo(72), PREVIEW_BY_OCCASION['business-meeting']),
-];
+let store: Outfit[] = [];
+let hydrated = false;
 
-let generatedCount = 0;
+export async function hydrateOutfits(): Promise<Outfit[]> {
+  if (hydrated) return store;
+  try {
+    const res = await api.get('/style/outfits');
+    if (res.data && Array.isArray(res.data)) {
+      store = res.data;
+    }
+  } catch {
+    // fallback
+  }
+  hydrated = true;
+  return store;
+}
 
-/** All outfits, newest first. */
 export function getOutfits(): Outfit[] {
   return [...store];
 }
 
 export function getOutfitById(id: string): Outfit | undefined {
-  return store.find((o) => o.id === id);
+  return store.find((o) => o.id === id || (o as any)._id === id);
 }
 
-export function removeOutfit(id: string): void {
-  const index = store.findIndex((o) => o.id === id);
+export async function removeOutfit(id: string): Promise<void> {
+  const index = store.findIndex((o) => o.id === id || (o as any)._id === id);
   if (index !== -1) {
+    const outfit = store[index];
     store.splice(index, 1);
+    try {
+      await api.delete(`/style/outfits/${(outfit as any)._id || outfit.id}`);
+    } catch (e) { console.error(e) }
   }
 }
 
 export function clearOutfits(): void {
   store.length = 0;
+  hydrated = false;
 }
 
 const mockWeather = [
@@ -155,23 +168,42 @@ const mockWeather = [
   { temp: 8, condition: 'Rainy' },
 ];
 
+let generatedCount = 0;
+
 /**
  * Generate a new outfit for the given occasion from the user's wardrobe, add it
  * to the store (newest first) and return it.
  */
-export function generateOutfit(occasion: OutfitOccasion): Outfit {
+export async function generateOutfit(occasion: OutfitOccasion): Promise<Outfit> {
   generatedCount += 1;
   const id = `gen-${Date.now()}-${generatedCount}`;
-  const outfit = makeOutfit(
+  const mockOutfit = makeOutfit(
     id,
     occasion,
     GENERATED_NAMES[occasion],
     new Date().toISOString(),
     previewFor(occasion),
   );
-  outfit.weatherContext = mockWeather[Math.floor(Math.random() * mockWeather.length)];
-  store.unshift(outfit);
-  return outfit;
+  mockOutfit.weatherContext = mockWeather[Math.floor(Math.random() * mockWeather.length)];
+  
+  try {
+    const payload = {
+      name: mockOutfit.name,
+      occasion: mockOutfit.occasion,
+      items: mockOutfit.items.map(i => (i.wardrobeItem as any)._id).filter(Boolean),
+      weatherContext: mockOutfit.weatherContext,
+    };
+    const res = await api.post('/style/outfits', payload);
+    if (res.data) {
+      // Re-hydrate the items from the returned populated object, or just fetch again
+      await hydrateOutfits();
+      const newOutfit = store.find((o: any) => o._id === res.data._id) || mockOutfit;
+      return newOutfit;
+    }
+  } catch (e) { console.error('Failed to save outfit to backend', e) }
+
+  store.unshift(mockOutfit);
+  return mockOutfit;
 }
 
 export function updateOutfitFeedback(id: string, feedback: 'like' | 'dislike'): void {
