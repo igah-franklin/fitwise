@@ -110,7 +110,16 @@ export async function hydrateOutfits(): Promise<Outfit[]> {
   try {
     const res = await api.get('/style/outfits');
     if (res.data && Array.isArray(res.data)) {
-      store = res.data.map(o => ({ ...o, id: o._id || o.id }));
+      store = res.data.map(o => {
+        const outfit = { ...o, id: o._id || o.id };
+        if (outfit.items) {
+          outfit.items = outfit.items.map((i: any) => ({
+            ...i,
+            wardrobeItem: i.wardrobeItemId || i.wardrobeItem
+          }));
+        }
+        return outfit;
+      });
     }
   } catch {
     // fallback

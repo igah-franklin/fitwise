@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { View, StyleSheet, ScrollView, Image, Dimensions, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
+import { BlurView } from 'expo-blur';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { Card } from '@/components/ui/Card';
@@ -139,11 +140,8 @@ export default function OutfitsScreen() {
               <SlideUp>
                 <View style={styles.recentHeader}>
                   <Text style={styles.sectionTitle}>Recent Outfits</Text>
-                  <PressScale>
-                    <Text style={styles.seeAllText}>See All</Text>
-                  </PressScale>
                 </View>
-                
+
                 {outfits.length > 0 ? (
                   <View style={styles.outfitsGrid}>
                     {outfits?.map(renderOutfit)}
@@ -170,7 +168,7 @@ export default function OutfitsScreen() {
                       Outfits tailored to your body measurements
                     </Text>
                   </Card>
-                  
+
                   <Card padding="md" style={styles.featureCard}>
                     <Ionicons name="camera-outline" size={24} color={theme.primary} />
                     <Text style={styles.featureTitle}>Visual Preview</Text>
@@ -178,7 +176,7 @@ export default function OutfitsScreen() {
                       See how outfits look with your likeness
                     </Text>
                   </Card>
-                  
+
                   <Card padding="md" style={styles.featureCard}>
                     <Ionicons name="refresh-outline" size={24} color={theme.success} />
                     <Text style={styles.featureTitle}>Unlimited Tries</Text>
@@ -186,7 +184,7 @@ export default function OutfitsScreen() {
                       Generate as many variations as you want
                     </Text>
                   </Card>
-                  
+
                   <Card padding="md" style={styles.featureCard}>
                     <Ionicons name="bag-outline" size={24} color={theme.warning} />
                     <Text style={styles.featureTitle}>Smart Shopping</Text>
@@ -208,12 +206,15 @@ export default function OutfitsScreen() {
         transparent={true}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
+        <BlurView intensity={40} tint="dark" style={styles.modalOverlay}>
           <View style={styles.modalContent}>
+            {/* Drag Handle Indicator */}
+            <View style={styles.modalDragHandle} />
+
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Design Your Look</Text>
               <PressScale onPress={() => setModalVisible(false)} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color={theme.text} />
+                <Ionicons name="close" size={20} color={theme.text} />
               </PressScale>
             </View>
 
@@ -221,7 +222,7 @@ export default function OutfitsScreen() {
               <Text style={styles.modalSectionTitle}>What's the occasion?</Text>
               <View style={styles.modalGrid}>
                 {occasions.map((occ) => (
-                  <PressScale 
+                  <PressScale
                     key={occ.key}
                     style={[
                       styles.modalChip,
@@ -229,11 +230,16 @@ export default function OutfitsScreen() {
                     ]}
                     onPress={() => setSelectedOccasion(occ.key)}
                   >
-                    <Ionicons 
-                      name={occ.icon as any} 
-                      size={20} 
-                      color={selectedOccasion === occ.key ? theme.onPrimary : theme.textMuted} 
-                    />
+                    <View style={[
+                      styles.modalChipIconContainer,
+                      selectedOccasion === occ.key && styles.modalChipIconContainerActive
+                    ]}>
+                      <Ionicons
+                        name={occ.icon as any}
+                        size={20}
+                        color={selectedOccasion === occ.key ? theme.primary : theme.textMuted}
+                      />
+                    </View>
                     <Text style={[
                       styles.modalChipText,
                       selectedOccasion === occ.key && styles.modalChipTextActive
@@ -247,10 +253,11 @@ export default function OutfitsScreen() {
               <Text style={styles.modalSectionTitle}>Vibe (Optional)</Text>
               <View style={styles.modalGrid}>
                 {['Standard', 'Edgy', 'Minimalist', 'Old Money'].map((vibe) => (
-                  <PressScale 
+                  <PressScale
                     key={vibe}
                     style={[
                       styles.modalChip,
+                      { paddingVertical: Layout.spacing.sm },
                       selectedVibe === vibe && styles.modalChipActive
                     ]}
                     onPress={() => setSelectedVibe(vibe)}
@@ -268,14 +275,15 @@ export default function OutfitsScreen() {
 
             <View style={styles.modalFooter}>
               <Button
-                title="Generate Now"
+                title="Generate Outfit"
                 variant="primary"
                 onPress={handleConfirmGenerate}
                 icon={<Ionicons name="sparkles" size={18} color={theme.onPrimary} />}
+                style={styles.generateActionButton}
               />
             </View>
           </View>
-        </View>
+        </BlurView>
       </Modal>
     </Screen>
   );
@@ -383,7 +391,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
   },
   outfitPreview: {
     position: 'relative',
-    aspectRatio: 3/4,
+    aspectRatio: 3 / 4,
   },
   previewImage: {
     width: '100%',
@@ -453,42 +461,55 @@ const makeStyles = (theme: any) => StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
+    backgroundColor: 'rgba(13, 30, 179, 0.63)',
   },
   modalContent: {
-    backgroundColor: theme.background,
-    borderTopLeftRadius: Layout.borderRadius.xl,
-    borderTopRightRadius: Layout.borderRadius.xl,
-    paddingTop: Layout.spacing.lg,
-    maxHeight: '85%',
+    backgroundColor: theme.card,
+    borderTopLeftRadius: Layout.borderRadius.xl * 1.5,
+    borderTopRightRadius: Layout.borderRadius.xl * 1.5,
+    paddingTop: Layout.spacing.sm,
+    maxHeight: '88%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  modalDragHandle: {
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: theme.border,
+    alignSelf: 'center',
+    marginBottom: Layout.spacing.md,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: Layout.spacing.lg,
-    marginBottom: Layout.spacing.md,
+    paddingHorizontal: Layout.spacing.xl,
+    paddingBottom: Layout.spacing.md,
   },
   modalTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '800',
     color: theme.text,
   },
   closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: theme.surfaceElevated,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalScroll: {
-    paddingHorizontal: Layout.spacing.lg,
+    paddingHorizontal: Layout.spacing.xl,
     paddingBottom: Layout.spacing.xl,
   },
   modalSectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: theme.text,
     marginTop: Layout.spacing.lg,
@@ -502,32 +523,48 @@ const makeStyles = (theme: any) => StyleSheet.create({
   modalChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Layout.spacing.sm,
     paddingHorizontal: Layout.spacing.md,
     paddingVertical: Layout.spacing.md,
-    borderRadius: Layout.borderRadius.lg,
+    borderRadius: Layout.borderRadius.xl,
     backgroundColor: theme.surface,
-    borderWidth: 1,
-    borderColor: theme.border,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
     minWidth: '48%',
+    flex: 1,
   },
   modalChipActive: {
-    backgroundColor: theme.primary,
+    backgroundColor: theme.primaryMuted,
     borderColor: theme.primary,
   },
+  modalChipIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.surfaceElevated,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Layout.spacing.sm,
+  },
+  modalChipIconContainerActive: {
+    backgroundColor: theme.background,
+  },
   modalChipText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: theme.text,
   },
   modalChipTextActive: {
-    color: theme.onPrimary,
+    color: theme.primary,
   },
   modalFooter: {
-    padding: Layout.spacing.lg,
+    padding: Layout.spacing.xl,
     paddingBottom: Layout.spacing.xxl,
-    backgroundColor: theme.surface,
+    backgroundColor: theme.card,
     borderTopWidth: 1,
-    borderTopColor: theme.border,
+    borderTopColor: theme.surface,
+  },
+  generateActionButton: {
+    borderRadius: Layout.borderRadius.full,
+    height: 56,
   },
 });

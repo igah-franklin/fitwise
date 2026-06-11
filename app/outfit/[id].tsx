@@ -108,7 +108,7 @@ export default function OutfitDetailsScreen() {
     const icon = CATEGORY_ICON[w.category] ?? 'pricetag-outline';
 
     return (
-      <PressScale key={item.id} style={styles.itemRow}>
+      <PressScale key={item.id || (item as any)._id || w.id || (w as any)._id} style={styles.itemRow}>
         <View style={styles.itemIcon}>
           <Ionicons name={icon as any} size={22} color={theme.primary} />
         </View>

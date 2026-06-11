@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, ScrollView, Dimensions, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { Card } from '@/components/ui/Card';
@@ -11,7 +11,7 @@ import { AnimatedScreen, SlideUp, Stagger, PressScale } from '@/components/ui/Mo
 import { useTheme } from '@/lib/theme';
 import { THEME } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
-import { getOutfits, formatTimeAgo, occasionLabel } from '@/lib/outfits';
+import { getOutfits, hydrateOutfits, formatTimeAgo, occasionLabel } from '@/lib/outfits';
 import { useWardrobe } from '@/lib/wardrobe';
 import { EmptyState } from '@/components/layout/EmptyState';
 
@@ -25,7 +25,17 @@ export default function HomeScreen() {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
   const wardrobe = useWardrobe();
-  const recentOutfits = getOutfits().slice(0, 3);
+  const [recentOutfits, setRecentOutfits] = React.useState<any[]>([]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      // Load outfits and update state to trigger re-render on the home screen
+      hydrateOutfits().then(() => {
+        setRecentOutfits(getOutfits().slice(0, 3));
+      });
+    }, [])
+  );
+
   const ownedItems = wardrobe.filter((i) => i.status === 'owned' || i.status === 'purchased').length;
   
   const handleGenerateWardrobe = () => {
@@ -139,16 +149,19 @@ export default function HomeScreen() {
                       onPress={() => router.push(`/outfit/${outfit.id}`)}
                     >
                       <View style={styles.recentImagesWrapper}>
-                        {pieces.map((p, idx) => (
-                          <Image
-                            key={p.id}
-                            source={{ uri: p.wardrobeItem.imageUrl }}
-                            style={[
-                              styles.recentImage,
-                              idx > 0 && styles.recentImageOverlap
-                            ]}
-                          />
-                        ))}
+                        {pieces.map((p: any, idx: number) => {
+                          if (!p.wardrobeItem?.imageUrl) return null;
+                          return (
+                            <Image
+                              key={p.id || p._id || idx}
+                              source={{ uri: p.wardrobeItem.imageUrl }}
+                              style={[
+                                styles.recentImage,
+                                idx > 0 && styles.recentImageOverlap
+                              ]}
+                            />
+                          );
+                        })}
                       </View>
                       <View style={styles.activityContent}>
                         <Text style={styles.activityTitle}>{occasionLabel(outfit.occasion)} Outfit</Text>
