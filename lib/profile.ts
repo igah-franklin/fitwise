@@ -25,10 +25,12 @@ export interface ProfilePhotos {
 }
 
 export interface UserProfile {
+  gender: string;
   measurements: Measurements;
   primaryStyle: StyleType;
   secondaryStyles: StyleType[];
   budget: BudgetRange;
+  existingBasics?: string[];
   photos: ProfilePhotos;
   completedAt?: string;
 }
@@ -44,15 +46,19 @@ export const EMPTY_MEASUREMENTS: Measurements = {
 
 export function emptyProfile(): UserProfile {
   return {
+    gender: 'male',
     measurements: { ...EMPTY_MEASUREMENTS },
     primaryStyle: 'smart-casual',
     secondaryStyles: [],
     budget: 'mid-range',
+    existingBasics: [],
     photos: {},
   };
 }
 
 // ─── Store ───────────────────────────────────────────────────────
+
+import api from './api';
 
 let cached: UserProfile | null = null;
 let hydrated = false;
@@ -62,12 +68,16 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
-/** Load the persisted profile into the in-memory cache (idempotent). */
+/** Load the profile from the backend into the in-memory cache. */
 export async function hydrateProfile(): Promise<UserProfile | null> {
   if (hydrated) return cached;
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    cached = raw ? (JSON.parse(raw) as UserProfile) : null;
+    const res = await api.get('/style/profile');
+    if (res.data) {
+      cached = res.data;
+    } else {
+      cached = null;
+    }
   } catch {
     cached = null;
   }
@@ -88,20 +98,22 @@ export async function saveProfile(profile: UserProfile): Promise<void> {
   cached = profile;
   hydrated = true;
   try {
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
-  } catch {
-    // Keep the in-memory copy even if persistence fails.
+    const res = await api.put('/style/profile', profile);
+    cached = res.data;
+  } catch (error) {
+    console.error('Failed to save profile', error);
   }
   emit();
 }
 
+export async function updateProfile(updates: Partial<UserProfile>): Promise<void> {
+  const current = getProfile() ?? emptyProfile();
+  await saveProfile({ ...current, ...updates });
+}
+
 export async function clearProfile(): Promise<void> {
   cached = null;
-  try {
-    await AsyncStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // ignore
-  }
+  hydrated = false;
   emit();
 }
 
@@ -158,6 +170,15 @@ export const BUDGET_OPTIONS: {
     description: 'Elevated, investment-grade wardrobe',
     icon: 'diamond-outline',
   },
+];
+
+export const COMMON_BASICS = [
+  { key: 'whiteTee', label: 'White T-Shirt' },
+  { key: 'darkDenim', label: 'Dark Wash Jeans' },
+  { key: 'whiteSneakers', label: 'White Sneakers' },
+  { key: 'navyBlazer', label: 'Navy Blazer' },
+  { key: 'navyChinos', label: 'Navy Chinos' },
+  { key: 'whiteOxford', label: 'White Oxford Shirt' },
 ];
 
 export function styleLabel(style: StyleType): string {

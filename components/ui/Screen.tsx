@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, type ScrollViewProps, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { THEME } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
 
 interface ScreenProps extends ScrollViewProps {
@@ -16,6 +16,8 @@ export function Screen({
   children,
   ...props
 }: ScreenProps) {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   if (scroll) {
     return (
       <SafeAreaView style={styles.container} edges={edges}>
@@ -39,10 +41,10 @@ export function Screen({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.background,
+    backgroundColor: theme.background,
   },
   scroll: {
     flex: 1,

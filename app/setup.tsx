@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Animated, { FadeIn, FadeOut, withRepeat, withTiming, useSharedValue, useAnimatedStyle, Easing } from 'react-native-reanimated';
 import {
   View,
   StyleSheet,
@@ -19,7 +20,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PressScale } from '@/components/ui/Motion';
-import { THEME } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
 import {
   getProfile,
@@ -27,6 +28,7 @@ import {
   emptyProfile,
   STYLE_OPTIONS,
   BUDGET_OPTIONS,
+  COMMON_BASICS,
   type Measurements,
   type ProfilePhotos,
   type UserProfile,
@@ -39,6 +41,7 @@ const STEPS = [
   { title: 'Your Measurements', subtitle: 'So every recommendation fits you exactly.' },
   { title: 'Your Style', subtitle: 'Pick the looks you want to live in.' },
   { title: 'Your Budget', subtitle: 'We tailor prices and brands to your range.' },
+  { title: 'Existing Wardrobe', subtitle: 'Check off basics you already own so we don\'t recommend them again.' },
   { title: 'Your Photos', subtitle: 'Optional — preview outfits on your own body.' },
 ];
 
@@ -49,15 +52,71 @@ const MEASUREMENT_FIELDS: {
   placeholder: string;
   required?: boolean;
 }[] = [
-  { key: 'height', label: 'Height', unit: 'cm', placeholder: '178', required: true },
-  { key: 'weight', label: 'Weight', unit: 'kg', placeholder: '74', required: true },
-  { key: 'chest', label: 'Chest', unit: 'cm', placeholder: '100', required: true },
-  { key: 'waist', label: 'Waist', unit: 'cm', placeholder: '82', required: true },
-  { key: 'shoulderWidth', label: 'Shoulders', unit: 'cm', placeholder: '46' },
-  { key: 'inseam', label: 'Inseam', unit: 'cm', placeholder: '80' },
-];
+    { key: 'height', label: 'Height', unit: 'cm', placeholder: '178', required: true },
+    { key: 'weight', label: 'Weight', unit: 'kg', placeholder: '74', required: true },
+    { key: 'chest', label: 'Chest', unit: 'cm', placeholder: '100', required: true },
+    { key: 'waist', label: 'Waist', unit: 'cm', placeholder: '82', required: true },
+    { key: 'shoulderWidth', label: 'Shoulders', unit: 'cm', placeholder: '46' },
+    { key: 'inseam', label: 'Inseam', unit: 'cm', placeholder: '80' },
+  ];
+
+function GeneratingWardrobeScreen({ theme }: { theme: any }) {
+  const styles = makeStyles(theme);
+  const [stepIndex, setStepIndex] = useState(0);
+  const steps = [
+    'Analyzing style profile...',
+    'Curating personalized pieces...',
+    'Generating premium product shots...',
+    'Finalizing your wardrobe...',
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStepIndex((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const pulse = useSharedValue(1);
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withTiming(1.2, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
+  }, []);
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse.value }],
+    opacity: 1.5 - pulse.value,
+  }));
+
+  return (
+    <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <Animated.View style={[styles.pulseCircle, { backgroundColor: theme.primary }, pulseStyle]} />
+      <View style={[styles.iconContainer, { backgroundColor: theme.card }]}>
+        <Ionicons name="sparkles" size={48} color={theme.primary} />
+      </View>
+
+      <Animated.Text entering={FadeIn.duration(500)} style={styles.loadingTitle}>
+        Building your wardrobe
+      </Animated.Text>
+
+      <Animated.Text
+        key={stepIndex}
+        entering={FadeIn.duration(800)}
+        exiting={FadeOut.duration(400)}
+        style={styles.loadingText}
+      >
+        {steps[stepIndex]}
+      </Animated.Text>
+    </SafeAreaView>
+  );
+}
 
 export default function SetupScreen() {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   const params = useLocalSearchParams<{ occasion?: string }>();
   const existing = getProfile();
 
@@ -65,6 +124,7 @@ export default function SetupScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
 
+  const [gender, setGender] = useState<string>(existing?.gender ?? 'male');
   const [measurements, setMeasurements] = useState<Measurements>(
     () => existing?.measurements ?? emptyProfile().measurements,
   );
@@ -75,6 +135,7 @@ export default function SetupScreen() {
     existing?.secondaryStyles ?? [],
   );
   const [budget, setBudget] = useState<BudgetRange>(existing?.budget ?? 'mid-range');
+  const [existingBasics, setExistingBasics] = useState<string[]>(existing?.existingBasics ?? []);
   const [photos, setPhotos] = useState<ProfilePhotos>(existing?.photos ?? {});
 
   const isLastStep = step === STEPS.length - 1;
@@ -87,6 +148,12 @@ export default function SetupScreen() {
     // digits only
     const clean = value.replace(/[^0-9]/g, '');
     setMeasurements((prev) => ({ ...prev, [key]: clean }));
+  };
+
+  const toggleBasic = (basic: string) => {
+    setExistingBasics((prev) =>
+      prev.includes(basic) ? prev.filter((b) => b !== basic) : [...prev, basic],
+    );
   };
 
   const toggleSecondary = (style: StyleType) => {
@@ -148,46 +215,35 @@ export default function SetupScreen() {
     try {
       // Build the wardrobe first so the profile is only marked complete once
       // there's actually a wardrobe to shop from and generate outfits with.
-      await buildWardrobe({ primaryStyle, secondaryStyles, budget });
+      await buildWardrobe({ primaryStyle, secondaryStyles, budget, existingBasics });
 
       const profile: UserProfile = {
         measurements,
         primaryStyle,
         secondaryStyles,
         budget,
+        existingBasics,
         photos,
+        gender,
         completedAt: new Date().toISOString(),
       };
       await saveProfile(profile);
 
       const occasion = params.occasion as OutfitOccasion | undefined;
       if (occasion) {
-        const outfit = generateOutfit(occasion);
+        const outfit = await generateOutfit(occasion);
         router.replace(`/outfit/${outfit.id}`);
       } else {
         router.replace('/(tabs)/wardrobe');
       }
-    } catch (error) {
+    } catch (error: any) {
       setSubmitting(false);
-      Alert.alert('Something went wrong', 'Please try generating your wardrobe again.');
+      Alert.alert('Something went wrong', error.message || 'Please try generating your wardrobe again.');
     }
   };
 
   if (submitting) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingWrap}>
-          <View style={styles.loadingIcon}>
-            <Ionicons name="sparkles" size={36} color={THEME.primary} />
-          </View>
-          <ActivityIndicator size="large" color={THEME.primary} style={styles.loadingSpinner} />
-          <Text style={styles.loadingTitle}>Building your wardrobe</Text>
-          <Text style={styles.loadingText}>
-            Matching pieces to your measurements, style and budget…
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
+    return <GeneratingWardrobeScreen theme={theme} />;
   }
 
   return (
@@ -195,7 +251,7 @@ export default function SetupScreen() {
       {/* Header */}
       <View style={styles.header}>
         <PressScale style={styles.headerButton} onPress={handleBack} hitSlop={10}>
-          <Ionicons name={step === 0 ? 'close' : 'chevron-back'} size={24} color={THEME.text} />
+          <Ionicons name={step === 0 ? 'close' : 'chevron-back'} size={24} color={theme.text} />
         </PressScale>
         <Text style={styles.stepCount}>
           Step {step + 1} of {STEPS.length}
@@ -210,7 +266,7 @@ export default function SetupScreen() {
             key={i}
             style={[
               styles.progressSegment,
-              { backgroundColor: i <= step ? THEME.primary : THEME.surfaceElevated },
+              { backgroundColor: i <= step ? theme.primary : theme.surfaceElevated },
             ]}
           />
         ))}
@@ -232,24 +288,50 @@ export default function SetupScreen() {
 
           {/* Step 0 — Measurements */}
           {step === 0 && (
-            <View style={styles.measureGrid}>
-              {MEASUREMENT_FIELDS.map((field) => {
-                const hasError = showErrors && field.required && !measurements[field.key].trim();
-                return (
-                  <Input
-                    key={field.key}
-                    style={styles.measureField}
-                    label={`${field.label}${field.required ? '' : ' (optional)'}`}
-                    value={measurements[field.key]}
-                    onChangeText={(v) => updateMeasurement(field.key, v)}
-                    placeholder={field.placeholder}
-                    keyboardType="number-pad"
-                    hint={field.unit}
-                    error={hasError ? 'Required' : undefined}
-                    maxLength={3}
-                  />
-                );
-              })}
+            <View>
+              <Text style={styles.groupLabel}>Gender</Text>
+              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+                {['male', 'female'].map(g => (
+                  <PressScale
+                    key={g}
+                    style={[
+                      styles.styleChip,
+                      { flex: 1, paddingVertical: 12, justifyContent: 'center' },
+                      gender === g && styles.styleChipActive
+                    ]}
+                    onPress={() => setGender(g)}
+                  >
+                    <Text style={[
+                      styles.styleChipText,
+                      { fontSize: 14, textTransform: 'capitalize' },
+                      gender === g && styles.styleChipTextActive
+                    ]}>
+                      {g}
+                    </Text>
+                  </PressScale>
+                ))}
+              </View>
+
+              <Text style={styles.groupLabel}>Measurements</Text>
+              <View style={styles.measureGrid}>
+                {MEASUREMENT_FIELDS.map((field) => {
+                  const hasError = showErrors && field.required && !measurements[field.key].trim();
+                  return (
+                    <Input
+                      key={field.key}
+                      style={styles.measureField}
+                      label={`${field.label}${field.required ? '' : ' (optional)'}`}
+                      value={measurements[field.key]}
+                      onChangeText={(v) => updateMeasurement(field.key, v)}
+                      placeholder={field.placeholder}
+                      keyboardType="number-pad"
+                      hint={field.unit}
+                      error={hasError ? 'Required' : undefined}
+                      maxLength={3}
+                    />
+                  );
+                })}
+              </View>
             </View>
           )}
 
@@ -269,7 +351,7 @@ export default function SetupScreen() {
                       <Ionicons
                         name={opt.icon as any}
                         size={18}
-                        color={active ? THEME.onPrimary : THEME.primary}
+                        color={active ? theme.onPrimary : theme.primary}
                       />
                       <Text style={[styles.styleChipText, active && styles.styleChipTextActive]}>
                         {opt.label}
@@ -294,7 +376,7 @@ export default function SetupScreen() {
                       <Ionicons
                         name={active ? 'checkmark' : (opt.icon as any)}
                         size={16}
-                        color={active ? THEME.primary : THEME.textMuted}
+                        color={active ? theme.primary : theme.textMuted}
                       />
                       <Text
                         style={[
@@ -326,13 +408,13 @@ export default function SetupScreen() {
                         <View
                           style={[
                             styles.budgetIcon,
-                            active && { backgroundColor: THEME.primary },
+                            active && { backgroundColor: theme.primary },
                           ]}
                         >
                           <Ionicons
                             name={opt.icon as any}
                             size={22}
-                            color={active ? THEME.onPrimary : THEME.primary}
+                            color={active ? theme.onPrimary : theme.primary}
                           />
                         </View>
                         <View style={styles.budgetInfo}>
@@ -345,7 +427,7 @@ export default function SetupScreen() {
                         <Ionicons
                           name={active ? 'radio-button-on' : 'radio-button-off'}
                           size={22}
-                          color={active ? THEME.primary : THEME.textMuted}
+                          color={active ? theme.primary : theme.textMuted}
                         />
                       </View>
                     </Card>
@@ -355,8 +437,41 @@ export default function SetupScreen() {
             </View>
           )}
 
-          {/* Step 3 — Photos */}
+          {/* Step 3 — Existing Wardrobe */}
           {step === 3 && (
+            <View>
+              <Text style={styles.groupLabel}>Select what you already own</Text>
+              <View style={styles.styleGrid}>
+                {COMMON_BASICS.map((opt) => {
+                  const active = existingBasics.includes(opt.key);
+                  return (
+                    <PressScale
+                      key={opt.key}
+                      style={[styles.styleChipOutline, active && styles.styleChipOutlineActive]}
+                      onPress={() => toggleBasic(opt.key)}
+                    >
+                      <Ionicons
+                        name={active ? 'checkmark-circle' : 'ellipse-outline'}
+                        size={18}
+                        color={active ? theme.primary : theme.textMuted}
+                      />
+                      <Text
+                        style={[
+                          styles.styleChipOutlineText,
+                          active && styles.styleChipOutlineTextActive,
+                        ]}
+                      >
+                        {opt.label}
+                      </Text>
+                    </PressScale>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
+          {/* Step 4 — Photos */}
+          {step === 4 && (
             <View style={styles.photoRow}>
               {(['front', 'side'] as const).map((slot) => {
                 const uri = photos[slot];
@@ -372,7 +487,7 @@ export default function SetupScreen() {
                       </>
                     ) : (
                       <View style={styles.photoEmpty}>
-                        <Ionicons name="camera-outline" size={28} color={THEME.primary} />
+                        <Ionicons name="camera-outline" size={28} color={theme.primary} />
                         <Text style={styles.photoSlotLabel}>
                           {slot === 'front' ? 'Front photo' : 'Side photo'}
                         </Text>
@@ -385,9 +500,9 @@ export default function SetupScreen() {
             </View>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <View style={styles.photoNote}>
-              <Ionicons name="lock-closed-outline" size={14} color={THEME.textMuted} />
+              <Ionicons name="lock-closed-outline" size={14} color={theme.textMuted} />
               <Text style={styles.photoNoteText}>
                 Photos stay on your device and are only used to preview how outfits look on you.
               </Text>
@@ -411,7 +526,7 @@ export default function SetupScreen() {
             <Ionicons
               name={isLastStep ? 'sparkles' : 'arrow-forward'}
               size={18}
-              color={THEME.onPrimary}
+              color={theme.onPrimary}
             />
           }
         />
@@ -420,10 +535,10 @@ export default function SetupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.background,
+    backgroundColor: theme.background,
   },
   flex: {
     flex: 1,
@@ -445,7 +560,7 @@ const styles = StyleSheet.create({
   stepCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
   },
   progress: {
     flexDirection: 'row',
@@ -465,12 +580,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '800',
-    color: THEME.text,
+    color: theme.text,
     marginBottom: Layout.spacing.xs,
   },
   subtitle: {
     fontSize: 15,
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
     lineHeight: 22,
     marginBottom: Layout.spacing.xl,
   },
@@ -488,7 +603,7 @@ const styles = StyleSheet.create({
   groupLabel: {
     fontSize: 14,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
     marginBottom: Layout.spacing.md,
   },
   groupLabelSpaced: {
@@ -506,21 +621,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: Layout.spacing.md,
     paddingVertical: Layout.spacing.sm + 2,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     borderWidth: 1.5,
-    borderColor: THEME.border,
+    borderColor: theme.border,
   },
   styleChipActive: {
-    backgroundColor: THEME.primary,
-    borderColor: THEME.primary,
+    backgroundColor: theme.primary,
+    borderColor: theme.primary,
   },
   styleChipText: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.text,
+    color: theme.text,
   },
   styleChipTextActive: {
-    color: THEME.onPrimary,
+    color: theme.onPrimary,
   },
   styleChipOutline: {
     flexDirection: 'row',
@@ -529,21 +644,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: Layout.spacing.md,
     paddingVertical: Layout.spacing.sm,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: THEME.border,
+    borderColor: theme.border,
   },
   styleChipOutlineActive: {
-    borderColor: THEME.primary,
-    backgroundColor: THEME.primaryMuted,
+    borderColor: theme.primary,
+    backgroundColor: theme.primaryMuted,
   },
   styleChipOutlineText: {
     fontSize: 13,
     fontWeight: '600',
-    color: THEME.textMuted,
+    color: theme.textMuted,
   },
   styleChipOutlineTextActive: {
-    color: THEME.primary,
+    color: theme.primary,
   },
   // Budget
   budgetList: {
@@ -551,10 +666,10 @@ const styles = StyleSheet.create({
   },
   budgetCard: {
     borderWidth: 1.5,
-    borderColor: THEME.border,
+    borderColor: theme.border,
   },
   budgetCardActive: {
-    borderColor: THEME.primary,
+    borderColor: theme.primary,
   },
   budgetRow: {
     flexDirection: 'row',
@@ -565,7 +680,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.primaryMuted,
+    backgroundColor: theme.primaryMuted,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -580,16 +695,16 @@ const styles = StyleSheet.create({
   budgetLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
   },
   budgetRange: {
     fontSize: 12,
     fontWeight: '600',
-    color: THEME.primary,
+    color: theme.primary,
   },
   budgetDescription: {
     fontSize: 13,
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
     marginTop: 2,
     lineHeight: 18,
   },
@@ -603,9 +718,9 @@ const styles = StyleSheet.create({
     aspectRatio: 3 / 4,
     borderRadius: Layout.borderRadius.lg,
     overflow: 'hidden',
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     borderWidth: 1.5,
-    borderColor: THEME.border,
+    borderColor: theme.border,
     borderStyle: 'dashed',
   },
   photoEmpty: {
@@ -617,12 +732,12 @@ const styles = StyleSheet.create({
   photoSlotLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.text,
+    color: theme.text,
     marginTop: Layout.spacing.sm,
   },
   photoSlotHint: {
     fontSize: 12,
-    color: THEME.textMuted,
+    color: theme.textMuted,
   },
   photoImage: {
     width: '100%',
@@ -654,7 +769,7 @@ const styles = StyleSheet.create({
   photoNoteText: {
     flex: 1,
     fontSize: 12,
-    color: THEME.textMuted,
+    color: theme.textMuted,
     lineHeight: 18,
   },
   // Footer
@@ -663,7 +778,7 @@ const styles = StyleSheet.create({
     paddingTop: Layout.spacing.md,
     paddingBottom: Layout.spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: THEME.divider,
+    borderTopColor: theme.divider,
     gap: Layout.spacing.sm,
   },
   skipPhotos: {
@@ -673,7 +788,7 @@ const styles = StyleSheet.create({
   skipPhotosText: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.textMuted,
+    color: theme.textMuted,
   },
   // Loading
   loadingWrap: {
@@ -686,7 +801,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.primaryMuted,
+    backgroundColor: theme.primaryMuted,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Layout.spacing.lg,
@@ -697,13 +812,37 @@ const styles = StyleSheet.create({
   loadingTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
     marginBottom: Layout.spacing.sm,
   },
   loadingText: {
     fontSize: 14,
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  pulseCircle: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    top: '40%', // Adjust to be behind icon
+    left: '50%',
+    marginLeft: -80,
+    marginTop: -80,
+    opacity: 0.1,
+  },
+  iconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Layout.spacing.xl,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 8,
   },
 });

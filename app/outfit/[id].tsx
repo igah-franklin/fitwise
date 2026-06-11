@@ -8,7 +8,7 @@ import { Text } from '@/components/ui/Text';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { AnimatedScreen, SlideUp, Stagger, PressScale } from '@/components/ui/Motion';
-import { THEME } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
 import {
   getOutfitById,
@@ -16,8 +16,11 @@ import {
   estimateOutfitBudget,
   formatTimeAgo,
   occasionLabel,
+  updateOutfitFeedback,
+  removeOutfit,
 } from '@/lib/outfits';
 import type { ClothingCategory, ItemStatus, OutfitItem } from '@/lib/types';
+import { GeneratingOutfitScreen } from '@/components/GeneratingOutfitScreen';
 
 const CATEGORY_ICON: Record<ClothingCategory, string> = {
   tops: 'shirt-outline',
@@ -27,24 +30,27 @@ const CATEGORY_ICON: Record<ClothingCategory, string> = {
   accessories: 'watch-outline',
 };
 
-const STATUS_META: Record<ItemStatus, { label: string; color: string; icon: string }> = {
-  owned: { label: 'In wardrobe', color: THEME.success, icon: 'checkmark-circle' },
-  purchased: { label: 'Purchased', color: THEME.primary, icon: 'bag-check' },
-  recommended: { label: 'Suggested', color: THEME.warning, icon: 'add-circle-outline' },
-  replaced: { label: 'Replaced', color: THEME.textMuted, icon: 'swap-horizontal-outline' },
-};
+const getStatusMeta = (theme: any): Record<ItemStatus, { label: string; color: string; icon: string }> => ({
+  owned: { label: 'In wardrobe', color: theme.success, icon: 'checkmark-circle' },
+  purchased: { label: 'Purchased', color: theme.primary, icon: 'bag-check' },
+  recommended: { label: 'Suggested', color: theme.warning, icon: 'add-circle-outline' },
+  replaced: { label: 'Replaced', color: theme.textMuted, icon: 'swap-horizontal-outline' },
+});
 
 export default function OutfitDetailsScreen() {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   const { id } = useLocalSearchParams<{ id: string }>();
   const [outfit, setOutfit] = useState(() => (id ? getOutfitById(id) : undefined));
   const [saved, setSaved] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [feedback, setFeedback] = useState<'like' | 'dislike' | undefined>(outfit?.feedback);
 
   if (!outfit) {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.notFound}>
-          <Ionicons name="shirt-outline" size={48} color={THEME.textMuted} />
+          <Ionicons name="shirt-outline" size={48} color={theme.textMuted} />
           <Text style={styles.notFoundTitle}>Outfit not found</Text>
           <Text style={styles.notFoundText}>
             This outfit may have expired. Generate a fresh look to get started.
@@ -65,16 +71,24 @@ export default function OutfitDetailsScreen() {
     setSaved((prev) => !prev);
   };
 
-  const handleRegenerate = () => {
+  const handleRegenerate = async () => {
     setRegenerating(true);
-    // Simulate AI re-generation, then swap the screen to the new look.
-    setTimeout(() => {
-      const next = generateOutfit(outfit.occasion);
+    try {
+      const next = await generateOutfit(outfit.occasion);
       setRegenerating(false);
       setSaved(false);
+      setFeedback(undefined);
       setOutfit(next);
       router.setParams({ id: next.id });
-    }, 1600);
+    } catch (e: any) {
+      setRegenerating(false);
+      Alert.alert('Generation Error', e.message);
+    }
+  };
+
+  const handleFeedback = (type: 'like' | 'dislike') => {
+    updateOutfitFeedback(outfit.id, type);
+    setFeedback(type);
   };
 
   const handleShop = () => {
@@ -90,13 +104,13 @@ export default function OutfitDetailsScreen() {
 
   const renderItem = (item: OutfitItem) => {
     const w = item.wardrobeItem;
-    const status = STATUS_META[w.status] ?? STATUS_META.recommended;
+    const status = getStatusMeta(theme)[w.status] ?? getStatusMeta(theme).recommended;
     const icon = CATEGORY_ICON[w.category] ?? 'pricetag-outline';
 
     return (
-      <PressScale key={item.id} style={styles.itemRow}>
+      <PressScale key={item.id || (item as any)._id || w.id || (w as any)._id} style={styles.itemRow}>
         <View style={styles.itemIcon}>
-          <Ionicons name={icon as any} size={22} color={THEME.primary} />
+          <Ionicons name={icon as any} size={22} color={theme.primary} />
         </View>
         <View style={styles.itemInfo}>
           <Text style={styles.itemName}>{w.name}</Text>
@@ -113,27 +127,43 @@ export default function OutfitDetailsScreen() {
         </View>
         <View style={styles.itemBudgetWrap}>
           <Text style={styles.itemBudget}>{w.budgetRange}</Text>
-          <Ionicons name="chevron-forward" size={16} color={THEME.textMuted} />
+          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
         </View>
       </PressScale>
     );
   };
+
+  if (regenerating) {
+    return <GeneratingOutfitScreen />;
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <PressScale style={styles.headerButton} onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="chevron-back" size={24} color={THEME.text} />
+          <Ionicons name="chevron-back" size={24} color={theme.text} />
         </PressScale>
         <Text style={styles.headerTitle}>Outfit Details</Text>
-        <PressScale style={styles.headerButton} onPress={handleSave} hitSlop={10}>
-          <Ionicons
-            name={saved ? 'heart' : 'heart-outline'}
-            size={22}
-            color={saved ? THEME.danger : THEME.text}
-          />
-        </PressScale>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <PressScale style={styles.headerButton} onPress={handleSave} hitSlop={10}>
+            <Ionicons
+              name={saved ? 'heart' : 'heart-outline'}
+              size={22}
+              color={saved ? theme.danger : theme.text}
+            />
+          </PressScale>
+          <PressScale 
+            style={styles.headerButton} 
+            onPress={() => {
+              removeOutfit(outfit.id);
+              router.back();
+            }} 
+            hitSlop={10}
+          >
+            <Ionicons name="trash-outline" size={22} color={theme.danger} />
+          </PressScale>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -153,6 +183,14 @@ export default function OutfitDetailsScreen() {
                       {occasionLabel(outfit.occasion).toUpperCase()}
                     </Text>
                   </View>
+                  {outfit.weatherContext && (
+                    <View style={styles.weatherBadge}>
+                      <Ionicons name={outfit.weatherContext.condition === 'Sunny' ? 'sunny' : 'partly-sunny'} size={12} color="#fff" />
+                      <Text style={styles.weatherBadgeText}>
+                        {outfit.weatherContext.temp}°C {outfit.weatherContext.condition}
+                      </Text>
+                    </View>
+                  )}
                   <Text style={styles.heroTitle}>{outfit.name}</Text>
                   <Text style={styles.heroMeta}>
                     {outfit.items.length} pieces · Generated {formatTimeAgo(outfit.createdAt)}
@@ -184,7 +222,7 @@ export default function OutfitDetailsScreen() {
               <Card padding="lg" style={styles.budgetCard}>
                 <View style={styles.budgetHeader}>
                   <View style={styles.budgetIcon}>
-                    <Ionicons name="pricetags-outline" size={20} color={THEME.primary} />
+                    <Ionicons name="pricetags-outline" size={20} color={theme.primary} />
                   </View>
                   <View style={styles.budgetText}>
                     <Text style={styles.budgetLabel}>Estimated total</Text>
@@ -207,33 +245,48 @@ export default function OutfitDetailsScreen() {
 
             {/* Actions */}
             <SlideUp>
+              <View style={styles.feedbackRow}>
+                <PressScale 
+                  style={[styles.feedbackButton, feedback === 'dislike' && styles.feedbackButtonActive]} 
+                  onPress={() => handleFeedback('dislike')}
+                >
+                  <Ionicons name={feedback === 'dislike' ? 'thumbs-down' : 'thumbs-down-outline'} size={24} color={feedback === 'dislike' ? theme.danger : theme.textMuted} />
+                </PressScale>
+                <PressScale 
+                  style={[styles.feedbackButton, feedback === 'like' && styles.feedbackButtonActive]} 
+                  onPress={() => handleFeedback('like')}
+                >
+                  <Ionicons name={feedback === 'like' ? 'thumbs-up' : 'thumbs-up-outline'} size={24} color={feedback === 'like' ? theme.primary : theme.textMuted} />
+                </PressScale>
+              </View>
+
               <View style={styles.actions}>
                 <Button
+                  title={regenerating ? 'Regenerating…' : 'Give me another option'}
+                  variant="primary"
+                  loading={regenerating}
+                  onPress={handleRegenerate}
+                  icon={<Ionicons name="refresh-outline" size={18} color={theme.onPrimary} />}
+                  style={styles.regenerateButton}
+                />
+                <Button
                   title={saved ? 'Saved to Collection' : 'Save Outfit'}
-                  variant={saved ? 'secondary' : 'primary'}
+                  variant={saved ? 'secondary' : 'outline'}
                   onPress={handleSave}
                   icon={
                     <Ionicons
                       name={saved ? 'checkmark' : 'bookmark-outline'}
                       size={18}
-                      color={saved ? THEME.text : THEME.onPrimary}
+                      color={saved ? theme.text : theme.textMuted}
                     />
                   }
-                />
-                <Button
-                  title={regenerating ? 'Regenerating…' : 'Regenerate'}
-                  variant="secondary"
-                  loading={regenerating}
-                  onPress={handleRegenerate}
-                  icon={<Ionicons name="refresh-outline" size={18} color={THEME.text} />}
-                  style={styles.actionSpacing}
                 />
                 {toBuyCount > 0 && (
                   <Button
                     title={`Shop ${toBuyCount} Missing ${toBuyCount === 1 ? 'Piece' : 'Pieces'}`}
                     variant="ghost"
                     onPress={handleShop}
-                    icon={<Ionicons name="bag-outline" size={18} color={THEME.primary} />}
+                    icon={<Ionicons name="bag-outline" size={18} color={theme.primary} />}
                     style={styles.actionSpacing}
                   />
                 )}
@@ -246,10 +299,10 @@ export default function OutfitDetailsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.background,
+    backgroundColor: theme.background,
   },
   header: {
     height: 56,
@@ -262,16 +315,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     borderWidth: 1,
-    borderColor: THEME.border,
+    borderColor: theme.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
   },
   scrollContent: {
     paddingHorizontal: Layout.spacing.lg,
@@ -283,7 +336,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     aspectRatio: 3 / 4,
     marginBottom: Layout.spacing.lg,
-    backgroundColor: THEME.surfaceElevated,
+    backgroundColor: theme.surfaceElevated,
   },
   heroImage: {
     width: '100%',
@@ -313,6 +366,23 @@ const styles = StyleSheet.create({
     color: '#fff',
     letterSpacing: 0.6,
   },
+  weatherBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: Layout.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Layout.borderRadius.full,
+    marginBottom: Layout.spacing.sm,
+  },
+  weatherBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.6,
+  },
   heroTitle: {
     fontSize: 28,
     fontWeight: '800',
@@ -335,11 +405,11 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 22,
     fontWeight: '800',
-    color: THEME.text,
+    color: theme.text,
   },
   summaryLabel: {
     fontSize: 12,
-    color: THEME.textMuted,
+    color: theme.textMuted,
     fontWeight: '500',
     marginTop: 2,
     textAlign: 'center',
@@ -356,7 +426,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.primaryMuted,
+    backgroundColor: theme.primaryMuted,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -365,25 +435,25 @@ const styles = StyleSheet.create({
   },
   budgetLabel: {
     fontSize: 13,
-    color: THEME.textMuted,
+    color: theme.textMuted,
     fontWeight: '500',
   },
   budgetValue: {
     fontSize: 22,
     fontWeight: '800',
-    color: THEME.text,
+    color: theme.text,
     marginTop: 2,
   },
   budgetNote: {
     fontSize: 12,
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
     marginTop: Layout.spacing.md,
     lineHeight: 18,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
     marginBottom: Layout.spacing.md,
   },
   itemsList: {
@@ -394,17 +464,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Layout.spacing.md,
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     borderRadius: Layout.borderRadius.md,
     borderWidth: 1,
-    borderColor: THEME.border,
+    borderColor: theme.border,
     padding: Layout.spacing.md,
   },
   itemIcon: {
     width: 44,
     height: 44,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.primaryMuted,
+    backgroundColor: theme.primaryMuted,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -414,11 +484,11 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 15,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
   },
   itemMeta: {
     fontSize: 13,
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
     marginTop: 1,
   },
   itemTags: {
@@ -442,7 +512,7 @@ const styles = StyleSheet.create({
   },
   itemShop: {
     fontSize: 11,
-    color: THEME.textMuted,
+    color: theme.textMuted,
     flexShrink: 1,
   },
   itemBudgetWrap: {
@@ -453,13 +523,37 @@ const styles = StyleSheet.create({
   itemBudget: {
     fontSize: 13,
     fontWeight: '600',
-    color: THEME.text,
+    color: theme.text,
   },
   actions: {
     gap: 0,
   },
   actionSpacing: {
     marginTop: Layout.spacing.md,
+  },
+  regenerateButton: {
+    marginBottom: Layout.spacing.md,
+    paddingVertical: Layout.spacing.md,
+  },
+  feedbackRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Layout.spacing.xl,
+    marginBottom: Layout.spacing.lg,
+  },
+  feedbackButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: theme.surfaceElevated,
+    borderWidth: 1,
+    borderColor: theme.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  feedbackButtonActive: {
+    backgroundColor: theme.surface,
+    borderColor: theme.primary,
   },
   notFound: {
     flex: 1,
@@ -471,11 +565,11 @@ const styles = StyleSheet.create({
   notFoundTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
   },
   notFoundText: {
     fontSize: 14,
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },

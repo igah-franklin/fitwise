@@ -1,15 +1,19 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { View, StyleSheet, ScrollView, Dimensions, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { AnimatedScreen, SlideUp, Stagger, PressScale } from '@/components/ui/Motion';
+import { useTheme } from '@/lib/theme';
 import { THEME } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
+import { getOutfits, hydrateOutfits, formatTimeAgo, occasionLabel } from '@/lib/outfits';
+import { useWardrobe } from '@/lib/wardrobe';
+import { EmptyState } from '@/components/layout/EmptyState';
 
 const { width } = Dimensions.get('window');
 // Account for both the Screen's outer padding and the container's inner padding,
@@ -18,10 +22,26 @@ const cardWidth =
   (width - Layout.padding.screen * 2 - Layout.spacing.lg * 2 - Layout.spacing.md) / 2;
 
 export default function HomeScreen() {
-  const handleGenerateOutfit = () => {
-    // Always walk the user through the steps (measurements, style, budget,
-    // photos) so they can generate/refresh their wardrobe and outfit.
-    router.push('/setup?occasion=casual');
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
+  const wardrobe = useWardrobe();
+  const [recentOutfits, setRecentOutfits] = React.useState<any[]>([]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      // Load outfits and update state to trigger re-render on the home screen
+      hydrateOutfits().then(() => {
+        setRecentOutfits(getOutfits().slice(0, 3));
+      });
+    }, [])
+  );
+
+  const ownedItems = wardrobe.filter((i) => i.status === 'owned' || i.status === 'purchased').length;
+  
+  const handleGenerateWardrobe = () => {
+    // Walk the user through the steps (measurements, style, budget,
+    // photos) so they can generate/refresh their wardrobe.
+    router.push('/setup');
   };
 
   const handleSetupProfile = () => {
@@ -40,7 +60,7 @@ export default function HomeScreen() {
             </View>
             <View style={styles.headerRight}>
               <PressScale style={styles.notificationButton}>
-                <Ionicons name="notifications-outline" size={24} color={THEME.text} />
+                <Ionicons name="notifications-outline" size={24} color={theme.text} />
               </PressScale>
             </View>
           </View>
@@ -49,7 +69,7 @@ export default function HomeScreen() {
           <Stagger step={70} initialDelay={120}>
             <SlideUp>
               <LinearGradient
-                colors={[THEME.primary, '#1F4A7A']}
+                colors={[theme.primary, '#1F4A7A']}
                 style={styles.heroCard}
               >
                 <View style={styles.heroContent}>
@@ -57,17 +77,17 @@ export default function HomeScreen() {
                     <Text style={styles.heroTitle}>Ready to look</Text>
                     <Text style={styles.heroTitle}>your best?</Text>
                     <Text style={styles.heroSubtitle}>
-                      Generate the perfect outfit for any occasion with AI
+                      Generate the perfect wardrobe based on your preferences
                     </Text>
                   </View>
                   <View style={styles.heroIcon}>
-                    <Ionicons name="sparkles" size={32} color={THEME.onPrimary} />
+                    <Ionicons name="sparkles" size={32} color={theme.onPrimary} />
                   </View>
                 </View>
                 <Button
-                  title="Generate Outfit"
+                  title="Generate Wardrobe"
                   variant="secondary"
-                  onPress={handleGenerateOutfit}
+                  onPress={handleGenerateWardrobe}
                   style={styles.heroButton}
                 />
               </LinearGradient>
@@ -78,16 +98,16 @@ export default function HomeScreen() {
               <View style={styles.statsRow}>
                 <Card style={[styles.statCard, { width: cardWidth }]} padding="md">
                   <View style={styles.statHeader}>
-                    <Ionicons name="shirt-outline" size={20} color={THEME.primary} />
-                    <Text style={styles.statValue}>12</Text>
+                    <Ionicons name="shirt-outline" size={20} color={theme.primary} />
+                    <Text style={styles.statValue}>{wardrobe.length}</Text>
                   </View>
                   <Text style={styles.statLabel}>Wardrobe Items</Text>
                 </Card>
                 
                 <Card style={[styles.statCard, { width: cardWidth }]} padding="md">
                   <View style={styles.statHeader}>
-                    <Ionicons name="checkmark-circle-outline" size={20} color={THEME.success} />
-                    <Text style={styles.statValue}>8</Text>
+                    <Ionicons name="checkmark-circle-outline" size={20} color={theme.success} />
+                    <Text style={styles.statValue}>{ownedItems}</Text>
                   </View>
                   <Text style={styles.statLabel}>Owned Items</Text>
                 </Card>
@@ -100,31 +120,15 @@ export default function HomeScreen() {
               <View style={styles.actionsGrid}>
                 <PressScale style={[styles.actionCard, { width: cardWidth }]} onPress={handleSetupProfile}>
                   <View style={styles.actionIcon}>
-                    <Ionicons name="person-outline" size={24} color={THEME.primary} />
+                    <Ionicons name="person-outline" size={24} color={theme.primary} />
                   </View>
                   <Text style={styles.actionTitle}>Setup Profile</Text>
                   <Text style={styles.actionSubtitle}>Add measurements & preferences</Text>
                 </PressScale>
 
-                <PressScale style={[styles.actionCard, { width: cardWidth }]} onPress={() => router.push('/setup')}>
+                <PressScale style={[styles.actionCard, { width: cardWidth }]} onPress={() => router.push('/analytics')}>
                   <View style={styles.actionIcon}>
-                    <Ionicons name="camera-outline" size={24} color={THEME.accent} />
-                  </View>
-                  <Text style={styles.actionTitle}>Upload Photos</Text>
-                  <Text style={styles.actionSubtitle}>For better outfit previews</Text>
-                </PressScale>
-
-                <PressScale style={[styles.actionCard, { width: cardWidth }]} onPress={() => router.push('/(tabs)/wardrobe')}>
-                  <View style={styles.actionIcon}>
-                    <Ionicons name="bag-outline" size={24} color={THEME.primary} />
-                  </View>
-                  <Text style={styles.actionTitle}>Build Wardrobe</Text>
-                  <Text style={styles.actionSubtitle}>Get AI recommendations</Text>
-                </PressScale>
-
-                <PressScale style={[styles.actionCard, { width: cardWidth }]}>
-                  <View style={styles.actionIcon}>
-                    <Ionicons name="trending-up-outline" size={24} color={THEME.success} />
+                    <Ionicons name="trending-up-outline" size={24} color={theme.success} />
                   </View>
                   <Text style={styles.actionTitle}>Style Analytics</Text>
                   <Text style={styles.actionSubtitle}>Track your style journey</Text>
@@ -135,40 +139,45 @@ export default function HomeScreen() {
             {/* Recent Activity */}
             <SlideUp>
               <Text style={styles.sectionTitle}>Recent Activity</Text>
-              <Card padding="md" style={styles.activityCard}>
-                <View style={styles.activityItem}>
-                  <View style={styles.activityIcon}>
-                    <Ionicons name="sparkles" size={18} color={THEME.primary} />
-                  </View>
-                  <View style={styles.activityContent}>
-                    <Text style={styles.activityTitle}>Casual Friday Outfit</Text>
-                    <Text style={styles.activityTime}>Generated 2 hours ago</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={THEME.textMuted} />
-                </View>
-                
-                <View style={styles.activityItem}>
-                  <View style={styles.activityIcon}>
-                    <Ionicons name="checkmark-circle" size={18} color={THEME.success} />
-                  </View>
-                  <View style={styles.activityContent}>
-                    <Text style={styles.activityTitle}>Navy Chinos</Text>
-                    <Text style={styles.activityTime}>Marked as purchased</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={THEME.textMuted} />
-                </View>
-                
-                <View style={styles.activityItem}>
-                  <View style={styles.activityIcon}>
-                    <Ionicons name="add-circle" size={18} color={THEME.accent} />
-                  </View>
-                  <View style={styles.activityContent}>
-                    <Text style={styles.activityTitle}>White Oxford Shirt</Text>
-                    <Text style={styles.activityTime}>Added to wardrobe</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={THEME.textMuted} />
-                </View>
-              </Card>
+              {recentOutfits.length > 0 ? (
+                recentOutfits.map((outfit) => {
+                  const pieces = outfit.items.slice(0, 2); // get up to two pieces for thumbnails
+                  return (
+                    <PressScale 
+                      key={outfit.id} 
+                      style={styles.recentActivityCard}
+                      onPress={() => router.push(`/outfit/${outfit.id}`)}
+                    >
+                      <View style={styles.recentImagesWrapper}>
+                        {pieces.map((p: any, idx: number) => {
+                          if (!p.wardrobeItem?.imageUrl) return null;
+                          return (
+                            <Image
+                              key={p.id || p._id || idx}
+                              source={{ uri: p.wardrobeItem.imageUrl }}
+                              style={[
+                                styles.recentImage,
+                                idx > 0 && styles.recentImageOverlap
+                              ]}
+                            />
+                          );
+                        })}
+                      </View>
+                      <View style={styles.activityContent}>
+                        <Text style={styles.activityTitle}>{occasionLabel(outfit.occasion)} Outfit</Text>
+                        <Text style={styles.activityTime}>{formatTimeAgo(outfit.createdAt)}</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
+                    </PressScale>
+                  );
+                })
+              ) : (
+                <EmptyState
+                  icon="shirt-outline"
+                  title="No recent outfits"
+                  message="Generate an outfit to see it here."
+                />
+              )}
             </SlideUp>
           </Stagger>
         </View>
@@ -177,7 +186,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   container: {
     paddingHorizontal: Layout.spacing.lg,
     paddingTop: Layout.spacing.xl,
@@ -190,13 +199,13 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 16,
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
     fontWeight: '500',
   },
   userName: {
     fontSize: 24,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
     marginTop: 2,
   },
   headerRight: {
@@ -208,11 +217,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: THEME.border,
+    borderColor: theme.border,
   },
   heroCard: {
     padding: Layout.spacing.xl,
@@ -231,7 +240,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: THEME.onPrimary,
+    color: theme.onPrimary,
     lineHeight: 32,
   },
   heroSubtitle: {
@@ -249,7 +258,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroButton: {
-    backgroundColor: THEME.onPrimary,
+    backgroundColor: theme.onPrimary,
   },
   statsRow: {
     flexDirection: 'row',
@@ -268,17 +277,17 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: '800',
-    color: THEME.text,
+    color: theme.text,
   },
   statLabel: {
     fontSize: 13,
-    color: THEME.textMuted,
+    color: theme.textMuted,
     fontWeight: '500',
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
     marginBottom: Layout.spacing.md,
   },
   actionsGrid: {
@@ -289,16 +298,16 @@ const styles = StyleSheet.create({
   },
   actionCard: {
     padding: Layout.spacing.lg,
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     borderRadius: Layout.borderRadius.md,
     borderWidth: 1,
-    borderColor: THEME.border,
+    borderColor: theme.border,
     alignItems: 'center',
   },
   actionIcon: {
     width: 48,
     height: 48,
-    backgroundColor: THEME.primaryMuted,
+    backgroundColor: theme.primaryMuted,
     borderRadius: Layout.borderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
@@ -307,43 +316,57 @@ const styles = StyleSheet.create({
   actionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.text,
+    color: theme.text,
     textAlign: 'center',
     marginBottom: 4,
   },
   actionSubtitle: {
     fontSize: 12,
-    color: THEME.textMuted,
+    color: theme.textMuted,
     textAlign: 'center',
     lineHeight: 16,
   },
   activityCard: {
     gap: Layout.spacing.md,
   },
-  activityItem: {
+  recentActivityCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Layout.spacing.md,
+    padding: Layout.spacing.md,
+    backgroundColor: theme.surface,
+    borderRadius: Layout.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.border,
+    marginBottom: Layout.spacing.sm,
   },
-  activityIcon: {
-    width: 36,
-    height: 36,
-    backgroundColor: THEME.primaryMuted,
-    borderRadius: Layout.borderRadius.full,
-    justifyContent: 'center',
+  recentImagesWrapper: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginRight: Layout.spacing.md,
+    width: 60,
+  },
+  recentImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.surfaceElevated,
+    borderWidth: 2,
+    borderColor: theme.surface,
+  },
+  recentImageOverlap: {
+    marginLeft: -20,
   },
   activityContent: {
     flex: 1,
   },
   activityTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    color: THEME.text,
-    marginBottom: 2,
+    color: theme.text,
+    marginBottom: 4,
   },
   activityTime: {
-    fontSize: 12,
-    color: THEME.textMuted,
+    fontSize: 13,
+    color: theme.textMuted,
   },
 });

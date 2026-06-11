@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Screen } from '@/components/ui/Screen';
@@ -7,11 +8,13 @@ import { Text } from '@/components/ui/Text';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { AnimatedScreen, SlideUp, Stagger, PressScale } from '@/components/ui/Motion';
-import { THEME } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
-import { useProfile, measurementsSummary, styleLabel } from '@/lib/profile';
-import { useWardrobe } from '@/lib/wardrobe';
-import { getOutfits } from '@/lib/outfits';
+import { useProfile, measurementsSummary, styleLabel, clearProfile } from '@/lib/profile';
+import { useWardrobe, clearWardrobe } from '@/lib/wardrobe';
+import { getOutfits, clearOutfits } from '@/lib/outfits';
+import { useAuth } from '@/lib/AuthContext';
+import api from '@/lib/api';
 
 interface ProfileSectionProps {
   title: string;
@@ -22,12 +25,14 @@ interface ProfileSectionProps {
 }
 
 function ProfileSection({ title, value, onPress, icon, showChevron = true }: ProfileSectionProps) {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   return (
     <PressScale onPress={onPress} style={styles.sectionCard}>
       <View style={styles.sectionContent}>
         <View style={styles.sectionLeft}>
           <View style={styles.sectionIcon}>
-            <Ionicons name={icon} size={20} color={THEME.primary} />
+            <Ionicons name={icon} size={20} color={theme.primary} />
           </View>
           <View style={styles.sectionText}>
             <Text style={styles.sectionTitle}>{title}</Text>
@@ -35,7 +40,7 @@ function ProfileSection({ title, value, onPress, icon, showChevron = true }: Pro
           </View>
         </View>
         {showChevron && (
-          <Ionicons name="chevron-forward" size={16} color={THEME.textMuted} />
+          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
         )}
       </View>
     </PressScale>
@@ -43,8 +48,11 @@ function ProfileSection({ title, value, onPress, icon, showChevron = true }: Pro
 }
 
 export default function ProfileScreen() {
+  const { theme, themeName, setTheme } = useTheme();
+  const styles = makeStyles(theme);
   const profile = useProfile();
   const wardrobe = useWardrobe();
+  const { user, signOut } = useAuth();
 
   const userStats = {
     wardrobeItems: wardrobe.length,
@@ -52,13 +60,17 @@ export default function ProfileScreen() {
     toShop: wardrobe.filter((i) => i.status === 'recommended').length,
   };
 
-  const photoCount = profile ? [profile.photos.front, profile.photos.side].filter(Boolean).length : 0;
-  const styleValue = profile
+  const photoCount = profile ? [profile.photos?.front, profile.photos?.side].filter(Boolean).length : 0;
+  const styleValue = profile && profile.primaryStyle
     ? styleLabel(profile.primaryStyle) +
-      (profile.secondaryStyles.length ? `, +${profile.secondaryStyles.length} more` : '')
+      (profile.secondaryStyles?.length ? `, +${profile.secondaryStyles.length} more` : '')
     : 'Not set';
 
   const openSetup = () => router.push('/setup');
+
+  const toggleTheme = () => {
+    setTheme(themeName === 'light' ? 'dark' : 'light');
+  };
 
   const handleNotifications = () => {
     Alert.alert('Notifications', 'Manage your notification preferences.');
@@ -81,8 +93,38 @@ export default function ProfileScreen() {
         { 
           text: 'Sign Out', 
           style: 'destructive',
-          onPress: () => {
-            Alert.alert('Signed Out', 'You have been signed out successfully.');
+          onPress: async () => {
+            await signOut();
+            await clearProfile();
+            await clearWardrobe();
+            clearOutfits();
+            await AsyncStorage.removeItem('onboarded');
+          }
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to permanently delete your account and all data? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete('/auth/me');
+              await clearProfile();
+              await clearWardrobe();
+              clearOutfits();
+              await AsyncStorage.removeItem('onboarded');
+              await signOut(); // This will trigger AuthGuard to redirect to /login
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete account. Please try again later.');
+            }
           }
         },
       ]
@@ -97,7 +139,7 @@ export default function ProfileScreen() {
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Profile</Text>
             <PressScale style={styles.editButton} onPress={openSetup}>
-              <Ionicons name="create-outline" size={20} color={THEME.primary} />
+              <Ionicons name="create-outline" size={20} color={theme.primary} />
             </PressScale>
           </View>
 
@@ -107,11 +149,12 @@ export default function ProfileScreen() {
               <Card padding="lg" style={styles.userCard}>
                 <View style={styles.userInfo}>
                   <View style={styles.avatar}>
-                    <Ionicons name="person" size={32} color={THEME.primary} />
+                    <Ionicons name="person" size={32} color={theme.primary} />
                   </View>
                   <View style={styles.userDetails}>
-                    <Text style={styles.userName}>Style Champion</Text>
-                    <Text style={styles.userEmail}>
+                    <Text style={styles.userName}>{user?.name || 'Style Champion'}</Text>
+                    <Text style={styles.userEmail}>{user?.email || 'No email provided'}</Text>
+                    <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 4 }}>
                       {profile ? `${styleLabel(profile.primaryStyle)} style` : 'Setup not complete'}
                     </Text>
                   </View>
@@ -157,7 +200,7 @@ export default function ProfileScreen() {
                   title="Photos"
                   value={photoCount > 0 ? `${photoCount} photo${photoCount > 1 ? 's' : ''} uploaded` : 'None uploaded'}
                   icon="camera-outline"
-                  onPress={openSetup}
+                  onPress={() => router.push('/photos')}
                 />
               </View>
             </SlideUp>
@@ -166,6 +209,13 @@ export default function ProfileScreen() {
             <SlideUp>
               <Text style={styles.sectionHeader}>App Settings</Text>
               <View style={styles.sectionsContainer}>
+                <ProfileSection
+                  title="Appearance"
+                  value={themeName === 'light' ? 'Light mode' : 'Dark mode'}
+                  icon={themeName === 'light' ? 'sunny-outline' : 'moon-outline'}
+                  onPress={toggleTheme}
+                  showChevron={false}
+                />
                 <ProfileSection
                   title="Notifications"
                   icon="notifications-outline"
@@ -191,7 +241,15 @@ export default function ProfileScreen() {
                 variant="ghost"
                 onPress={handleSignOut}
                 style={styles.signOutButton}
-                icon={<Ionicons name="log-out-outline" size={18} color={THEME.danger} />}
+                icon={<Ionicons name="log-out-outline" size={18} color={theme.textMuted} />}
+              />
+              <Button
+                title="Delete Account"
+                variant="ghost"
+                onPress={handleDeleteAccount}
+                style={styles.deleteAccountButton}
+                icon={<Ionicons name="trash-outline" size={18} color={theme.danger} />}
+                textStyle={{ color: theme.danger }}
               />
             </SlideUp>
           </Stagger>
@@ -201,7 +259,7 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   container: {
     paddingHorizontal: Layout.spacing.lg,
     paddingTop: Layout.spacing.xl,
@@ -215,13 +273,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: THEME.text,
+    color: theme.text,
   },
   editButton: {
     width: 40,
     height: 40,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.primaryMuted,
+    backgroundColor: theme.primaryMuted,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -237,7 +295,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.primaryMuted,
+    backgroundColor: theme.primaryMuted,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -247,12 +305,12 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 20,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 14,
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
   },
   statsRow: {
     flexDirection: 'row',
@@ -266,19 +324,19 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: '800',
-    color: THEME.primary,
+    color: theme.primary,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: THEME.textMuted,
+    color: theme.textMuted,
     textAlign: 'center',
     fontWeight: '500',
   },
   sectionHeader: {
     fontSize: 16,
     fontWeight: '700',
-    color: THEME.text,
+    color: theme.text,
     marginBottom: Layout.spacing.sm,
     marginTop: Layout.spacing.md,
   },
@@ -286,10 +344,10 @@ const styles = StyleSheet.create({
     marginBottom: Layout.spacing.lg,
   },
   sectionCard: {
-    backgroundColor: THEME.surface,
+    backgroundColor: theme.surface,
     borderRadius: Layout.borderRadius.md,
     borderWidth: 1,
-    borderColor: THEME.border,
+    borderColor: theme.border,
     marginBottom: Layout.spacing.sm,
   },
   sectionContent: {
@@ -307,7 +365,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: Layout.borderRadius.full,
-    backgroundColor: THEME.primaryMuted,
+    backgroundColor: theme.primaryMuted,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Layout.spacing.md,
@@ -318,15 +376,18 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: THEME.text,
+    color: theme.text,
     marginBottom: 2,
   },
   sectionValue: {
     fontSize: 13,
-    color: THEME.textSecondary,
+    color: theme.textSecondary,
   },
   signOutButton: {
     marginTop: Layout.spacing.md,
+  },
+  deleteAccountButton: {
+    marginTop: Layout.spacing.sm,
     marginBottom: Layout.spacing.xxl,
   },
 });

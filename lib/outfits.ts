@@ -6,7 +6,7 @@
 // to by `generateOutfit`.
 
 import type { Outfit, OutfitItem, OutfitOccasion } from './types';
-import { type CatalogKey, resolvePiece } from './wardrobe';
+import { getWardrobe } from './wardrobe';
 import { getProfile } from './profile';
 
 // ─── Occasion metadata + recipes ─────────────────────────────────
@@ -28,19 +28,6 @@ export function occasionLabel(occasion: OutfitOccasion): string {
   return OCCASION_META[occasion]?.label ?? occasion;
 }
 
-// Which catalog pieces each occasion assembles, head-to-toe.
-const RECIPES: Record<OutfitOccasion, CatalogKey[]> = {
-  casual: ['whiteTee', 'darkDenim', 'whiteSneakers', 'watch'],
-  work: ['whiteOxford', 'navyChinos', 'brownLoafers', 'leatherBelt'],
-  'date-night': ['navyBlazer', 'whiteTee', 'darkDenim', 'chelseaBoots'],
-  'night-out': ['bomberJacket', 'navyTee', 'darkDenim', 'chelseaBoots'],
-  travel: ['chambrayShirt', 'navyChinos', 'whiteSneakers', 'watch'],
-  wedding: ['navyBlazer', 'whiteOxford', 'greyTrousers', 'brownLoafers'],
-  'business-meeting': ['navyBlazer', 'whiteOxford', 'greyTrousers', 'leatherBelt'],
-  vacation: ['chambrayShirt', 'whiteTee', 'whiteSneakers', 'watch'],
-  errands: ['navyTee', 'darkDenim', 'whiteSneakers'],
-  gym: ['whiteTee', 'darkDenim', 'whiteSneakers'],
-};
 
 const GENERATED_NAMES: Record<OutfitOccasion, string> = {
   casual: 'Easy Weekend',
@@ -69,14 +56,20 @@ const PREVIEW_BY_OCCASION: Record<OutfitOccasion, string> = {
 };
 
 function buildItems(occasion: OutfitOccasion, outfitId: string): OutfitItem[] {
-  return RECIPES[occasion].map((key) => {
-    const wardrobeItem = resolvePiece(key);
-    return {
-      id: `${outfitId}-${wardrobeItem.id}`,
-      wardrobeItemId: wardrobeItem.id,
-      wardrobeItem,
-    };
-  });
+  const wardrobe = getWardrobe();
+  // If no wardrobe, return empty
+  if (wardrobe.length === 0) return [];
+  
+  // Pick 3-4 random items from the user's actual generated wardrobe
+  const count = Math.min(wardrobe.length, Math.floor(Math.random() * 2) + 3);
+  const shuffled = [...wardrobe].sort(() => 0.5 - Math.random());
+  const selected = shuffled.slice(0, count);
+
+  return selected.map((wardrobeItem) => ({
+    id: `${outfitId}-${wardrobeItem.id}`,
+    wardrobeItemId: wardrobeItem.id,
+    wardrobeItem,
+  }));
 }
 
 /**
@@ -107,41 +100,107 @@ function makeOutfit(
   };
 }
 
-const hoursAgo = (h: number) => new Date(Date.now() - h * 60 * 60 * 1000).toISOString();
+import api from './api';
 
-const store: Outfit[] = [
-  makeOutfit('seed-casual-friday', 'work', 'Casual Friday', hoursAgo(2), PREVIEW_BY_OCCASION.work),
-  makeOutfit('seed-date-night', 'date-night', 'Date Night', hoursAgo(24), PREVIEW_BY_OCCASION['date-night']),
-  makeOutfit('seed-business', 'business-meeting', 'Business Meeting', hoursAgo(72), PREVIEW_BY_OCCASION['business-meeting']),
-];
+let store: Outfit[] = [];
+let hydrated = false;
 
-let generatedCount = 0;
+export async function hydrateOutfits(): Promise<Outfit[]> {
+  if (hydrated) return store;
+  try {
+    const res = await api.get('/style/outfits');
+    if (res.data && Array.isArray(res.data)) {
+      store = res.data.map(o => {
+        const outfit = { ...o, id: o._id || o.id };
+        if (outfit.items) {
+          outfit.items = outfit.items.map((i: any) => ({
+            ...i,
+            wardrobeItem: i.wardrobeItemId || i.wardrobeItem
+          }));
+        }
+        return outfit;
+      });
+    }
+  } catch {
+    // fallback
+  }
+  hydrated = true;
+  return store;
+}
 
-/** All outfits, newest first. */
 export function getOutfits(): Outfit[] {
   return [...store];
 }
 
 export function getOutfitById(id: string): Outfit | undefined {
-  return store.find((o) => o.id === id);
+  return store.find((o) => o.id === id || (o as any)._id === id);
 }
 
+export async function removeOutfit(id: string): Promise<void> {
+  const index = store.findIndex((o) => o.id === id || (o as any)._id === id);
+  if (index !== -1) {
+    const outfit = store[index];
+    store.splice(index, 1);
+    try {
+      await api.delete(`/style/outfits/${(outfit as any)._id || outfit.id}`);
+    } catch (e) { console.error(e) }
+  }
+}
+
+export function clearOutfits(): void {
+  store.length = 0;
+  hydrated = false;
+}
+
+const mockWeather = [
+  { temp: 22, condition: 'Sunny' },
+  { temp: 15, condition: 'Cloudy' },
+  { temp: 28, condition: 'Clear' },
+  { temp: 8, condition: 'Rainy' },
+];
+
+let generatedCount = 0;
 /**
  * Generate a new outfit for the given occasion from the user's wardrobe, add it
  * to the store (newest first) and return it.
  */
-export function generateOutfit(occasion: OutfitOccasion): Outfit {
-  generatedCount += 1;
-  const id = `gen-${Date.now()}-${generatedCount}`;
-  const outfit = makeOutfit(
-    id,
-    occasion,
-    GENERATED_NAMES[occasion],
-    new Date().toISOString(),
-    previewFor(occasion),
-  );
-  store.unshift(outfit);
-  return outfit;
+export async function generateOutfit(occasion: OutfitOccasion): Promise<Outfit> {
+  const weatherContext = mockWeather[Math.floor(Math.random() * mockWeather.length)];
+  
+  try {
+    const payload = {
+      occasion,
+      weatherContext,
+    };
+    
+    // Call our new AI generation endpoint
+    const res = await api.post('/style/outfits/generate', payload);
+    
+    if (res.data) {
+      // Re-hydrate the items from the returned populated object
+      const created = res.data;
+      created.id = created._id || created.id;
+      created.items = created.items.map((i: any) => ({
+        wardrobeItem: i.wardrobeItemId || i.wardrobeItem
+      }));
+      store.unshift(created);
+      return created;
+    } else {
+      throw new Error('No data returned from backend');
+    }
+  } catch (e: any) {
+    console.error('Failed to save outfit to backend', e.response?.data || e);
+    // Throw the readable backend error up to the UI so it can alert the user
+    const backendMessage = e.response?.data?.message || e.message || 'Failed to generate outfit';
+    throw new Error(backendMessage);
+  }
+}
+
+export function updateOutfitFeedback(id: string, feedback: 'like' | 'dislike'): void {
+  const outfit = store.find((o) => o.id === id);
+  if (outfit) {
+    outfit.feedback = feedback;
+  }
 }
 
 // ─── Derived helpers ─────────────────────────────────────────────
