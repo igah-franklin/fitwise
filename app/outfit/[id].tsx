@@ -16,6 +16,8 @@ import {
   estimateOutfitBudget,
   formatTimeAgo,
   occasionLabel,
+  updateOutfitFeedback,
+  removeOutfit,
 } from '@/lib/outfits';
 import type { ClothingCategory, ItemStatus, OutfitItem } from '@/lib/types';
 
@@ -39,6 +41,7 @@ export default function OutfitDetailsScreen() {
   const [outfit, setOutfit] = useState(() => (id ? getOutfitById(id) : undefined));
   const [saved, setSaved] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [feedback, setFeedback] = useState<'like' | 'dislike' | undefined>(outfit?.feedback);
 
   if (!outfit) {
     return (
@@ -72,9 +75,15 @@ export default function OutfitDetailsScreen() {
       const next = generateOutfit(outfit.occasion);
       setRegenerating(false);
       setSaved(false);
+      setFeedback(undefined);
       setOutfit(next);
       router.setParams({ id: next.id });
     }, 1600);
+  };
+
+  const handleFeedback = (type: 'like' | 'dislike') => {
+    updateOutfitFeedback(outfit.id, type);
+    setFeedback(type);
   };
 
   const handleShop = () => {
@@ -127,13 +136,25 @@ export default function OutfitDetailsScreen() {
           <Ionicons name="chevron-back" size={24} color={THEME.text} />
         </PressScale>
         <Text style={styles.headerTitle}>Outfit Details</Text>
-        <PressScale style={styles.headerButton} onPress={handleSave} hitSlop={10}>
-          <Ionicons
-            name={saved ? 'heart' : 'heart-outline'}
-            size={22}
-            color={saved ? THEME.danger : THEME.text}
-          />
-        </PressScale>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <PressScale style={styles.headerButton} onPress={handleSave} hitSlop={10}>
+            <Ionicons
+              name={saved ? 'heart' : 'heart-outline'}
+              size={22}
+              color={saved ? THEME.danger : THEME.text}
+            />
+          </PressScale>
+          <PressScale 
+            style={styles.headerButton} 
+            onPress={() => {
+              removeOutfit(outfit.id);
+              router.back();
+            }} 
+            hitSlop={10}
+          >
+            <Ionicons name="trash-outline" size={22} color={THEME.danger} />
+          </PressScale>
+        </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -153,6 +174,14 @@ export default function OutfitDetailsScreen() {
                       {occasionLabel(outfit.occasion).toUpperCase()}
                     </Text>
                   </View>
+                  {outfit.weatherContext && (
+                    <View style={styles.weatherBadge}>
+                      <Ionicons name={outfit.weatherContext.condition === 'Sunny' ? 'sunny' : 'partly-sunny'} size={12} color="#fff" />
+                      <Text style={styles.weatherBadgeText}>
+                        {outfit.weatherContext.temp}°C {outfit.weatherContext.condition}
+                      </Text>
+                    </View>
+                  )}
                   <Text style={styles.heroTitle}>{outfit.name}</Text>
                   <Text style={styles.heroMeta}>
                     {outfit.items.length} pieces · Generated {formatTimeAgo(outfit.createdAt)}
@@ -207,26 +236,41 @@ export default function OutfitDetailsScreen() {
 
             {/* Actions */}
             <SlideUp>
+              <View style={styles.feedbackRow}>
+                <PressScale 
+                  style={[styles.feedbackButton, feedback === 'dislike' && styles.feedbackButtonActive]} 
+                  onPress={() => handleFeedback('dislike')}
+                >
+                  <Ionicons name={feedback === 'dislike' ? 'thumbs-down' : 'thumbs-down-outline'} size={24} color={feedback === 'dislike' ? THEME.danger : THEME.textMuted} />
+                </PressScale>
+                <PressScale 
+                  style={[styles.feedbackButton, feedback === 'like' && styles.feedbackButtonActive]} 
+                  onPress={() => handleFeedback('like')}
+                >
+                  <Ionicons name={feedback === 'like' ? 'thumbs-up' : 'thumbs-up-outline'} size={24} color={feedback === 'like' ? THEME.primary : THEME.textMuted} />
+                </PressScale>
+              </View>
+
               <View style={styles.actions}>
                 <Button
+                  title={regenerating ? 'Regenerating…' : 'Give me another option'}
+                  variant="primary"
+                  loading={regenerating}
+                  onPress={handleRegenerate}
+                  icon={<Ionicons name="refresh-outline" size={18} color={THEME.onPrimary} />}
+                  style={styles.regenerateButton}
+                />
+                <Button
                   title={saved ? 'Saved to Collection' : 'Save Outfit'}
-                  variant={saved ? 'secondary' : 'primary'}
+                  variant={saved ? 'secondary' : 'outline'}
                   onPress={handleSave}
                   icon={
                     <Ionicons
                       name={saved ? 'checkmark' : 'bookmark-outline'}
                       size={18}
-                      color={saved ? THEME.text : THEME.onPrimary}
+                      color={saved ? THEME.text : THEME.textMuted}
                     />
                   }
-                />
-                <Button
-                  title={regenerating ? 'Regenerating…' : 'Regenerate'}
-                  variant="secondary"
-                  loading={regenerating}
-                  onPress={handleRegenerate}
-                  icon={<Ionicons name="refresh-outline" size={18} color={THEME.text} />}
-                  style={styles.actionSpacing}
                 />
                 {toBuyCount > 0 && (
                   <Button
@@ -308,6 +352,23 @@ const styles = StyleSheet.create({
     marginBottom: Layout.spacing.sm,
   },
   occasionBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.6,
+  },
+  weatherBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: Layout.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Layout.borderRadius.full,
+    marginBottom: Layout.spacing.sm,
+  },
+  weatherBadgeText: {
     fontSize: 10,
     fontWeight: '700',
     color: '#fff',
@@ -460,6 +521,30 @@ const styles = StyleSheet.create({
   },
   actionSpacing: {
     marginTop: Layout.spacing.md,
+  },
+  regenerateButton: {
+    marginBottom: Layout.spacing.md,
+    paddingVertical: Layout.spacing.md,
+  },
+  feedbackRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Layout.spacing.xl,
+    marginBottom: Layout.spacing.lg,
+  },
+  feedbackButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: THEME.surfaceElevated,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  feedbackButtonActive: {
+    backgroundColor: THEME.surface,
+    borderColor: THEME.primary,
   },
   notFound: {
     flex: 1,

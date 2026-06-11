@@ -9,9 +9,9 @@ import { Button } from '@/components/ui/Button';
 import { AnimatedScreen, SlideUp, Stagger, PressScale } from '@/components/ui/Motion';
 import { THEME } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
-import { useProfile, measurementsSummary, styleLabel } from '@/lib/profile';
-import { useWardrobe } from '@/lib/wardrobe';
-import { getOutfits } from '@/lib/outfits';
+import { useProfile, measurementsSummary, styleLabel, clearProfile } from '@/lib/profile';
+import { useWardrobe, clearWardrobe } from '@/lib/wardrobe';
+import { getOutfits, clearOutfits } from '@/lib/outfits';
 
 interface ProfileSectionProps {
   title: string;
@@ -89,6 +89,26 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to permanently delete your account and all data? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: async () => {
+            await clearProfile();
+            await clearWardrobe();
+            clearOutfits();
+            router.replace('/setup');
+          }
+        },
+      ]
+    );
+  };
+
   return (
     <Screen>
       <AnimatedScreen>
@@ -157,7 +177,7 @@ export default function ProfileScreen() {
                   title="Photos"
                   value={photoCount > 0 ? `${photoCount} photo${photoCount > 1 ? 's' : ''} uploaded` : 'None uploaded'}
                   icon="camera-outline"
-                  onPress={openSetup}
+                  onPress={() => router.push('/photos')}
                 />
               </View>
             </SlideUp>
@@ -191,7 +211,15 @@ export default function ProfileScreen() {
                 variant="ghost"
                 onPress={handleSignOut}
                 style={styles.signOutButton}
-                icon={<Ionicons name="log-out-outline" size={18} color={THEME.danger} />}
+                icon={<Ionicons name="log-out-outline" size={18} color={THEME.textMuted} />}
+              />
+              <Button
+                title="Delete Account"
+                variant="ghost"
+                onPress={handleDeleteAccount}
+                style={styles.deleteAccountButton}
+                icon={<Ionicons name="trash-outline" size={18} color={THEME.danger} />}
+                textStyle={{ color: THEME.danger }}
               />
             </SlideUp>
           </Stagger>
@@ -327,6 +355,9 @@ const styles = StyleSheet.create({
   },
   signOutButton: {
     marginTop: Layout.spacing.md,
+  },
+  deleteAccountButton: {
+    marginTop: Layout.spacing.sm,
     marginBottom: Layout.spacing.xxl,
   },
 });

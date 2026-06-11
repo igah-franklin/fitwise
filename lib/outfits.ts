@@ -6,7 +6,7 @@
 // to by `generateOutfit`.
 
 import type { Outfit, OutfitItem, OutfitOccasion } from './types';
-import { type CatalogKey, resolvePiece } from './wardrobe';
+import { type CatalogKey, resolvePiece, getWardrobe } from './wardrobe';
 import { getProfile } from './profile';
 
 // ─── Occasion metadata + recipes ─────────────────────────────────
@@ -69,8 +69,19 @@ const PREVIEW_BY_OCCASION: Record<OutfitOccasion, string> = {
 };
 
 function buildItems(occasion: OutfitOccasion, outfitId: string): OutfitItem[] {
+  const allOwned = getWardrobe().filter(w => w.status === 'owned' || w.status === 'purchased');
+  
   return RECIPES[occasion].map((key) => {
-    const wardrobeItem = resolvePiece(key);
+    let wardrobeItem = resolvePiece(key);
+    
+    // If the recipe piece isn't owned, try to substitute an owned item of the same category
+    if (wardrobeItem.status !== 'owned' && wardrobeItem.status !== 'purchased') {
+      const substitute = allOwned.find(w => w.category === wardrobeItem.category);
+      if (substitute) {
+        wardrobeItem = substitute;
+      }
+    }
+
     return {
       id: `${outfitId}-${wardrobeItem.id}`,
       wardrobeItemId: wardrobeItem.id,
@@ -126,6 +137,24 @@ export function getOutfitById(id: string): Outfit | undefined {
   return store.find((o) => o.id === id);
 }
 
+export function removeOutfit(id: string): void {
+  const index = store.findIndex((o) => o.id === id);
+  if (index !== -1) {
+    store.splice(index, 1);
+  }
+}
+
+export function clearOutfits(): void {
+  store.length = 0;
+}
+
+const mockWeather = [
+  { temp: 22, condition: 'Sunny' },
+  { temp: 15, condition: 'Cloudy' },
+  { temp: 28, condition: 'Clear' },
+  { temp: 8, condition: 'Rainy' },
+];
+
 /**
  * Generate a new outfit for the given occasion from the user's wardrobe, add it
  * to the store (newest first) and return it.
@@ -140,8 +169,16 @@ export function generateOutfit(occasion: OutfitOccasion): Outfit {
     new Date().toISOString(),
     previewFor(occasion),
   );
+  outfit.weatherContext = mockWeather[Math.floor(Math.random() * mockWeather.length)];
   store.unshift(outfit);
   return outfit;
+}
+
+export function updateOutfitFeedback(id: string, feedback: 'like' | 'dislike'): void {
+  const outfit = store.find((o) => o.id === id);
+  if (outfit) {
+    outfit.feedback = feedback;
+  }
 }
 
 // ─── Derived helpers ─────────────────────────────────────────────

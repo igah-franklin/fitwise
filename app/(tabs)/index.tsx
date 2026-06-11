@@ -18,10 +18,10 @@ const cardWidth =
   (width - Layout.padding.screen * 2 - Layout.spacing.lg * 2 - Layout.spacing.md) / 2;
 
 export default function HomeScreen() {
-  const handleGenerateOutfit = () => {
-    // Always walk the user through the steps (measurements, style, budget,
-    // photos) so they can generate/refresh their wardrobe and outfit.
-    router.push('/setup?occasion=casual');
+  const handleGenerateWardrobe = () => {
+    // Walk the user through the steps (measurements, style, budget,
+    // photos) so they can generate/refresh their wardrobe.
+    router.push('/setup');
   };
 
   const handleSetupProfile = () => {
@@ -57,7 +57,7 @@ export default function HomeScreen() {
                     <Text style={styles.heroTitle}>Ready to look</Text>
                     <Text style={styles.heroTitle}>your best?</Text>
                     <Text style={styles.heroSubtitle}>
-                      Generate the perfect outfit for any occasion with AI
+                      Generate the perfect wardrobe based on your preferences
                     </Text>
                   </View>
                   <View style={styles.heroIcon}>
@@ -65,9 +65,9 @@ export default function HomeScreen() {
                   </View>
                 </View>
                 <Button
-                  title="Generate Outfit"
+                  title="Generate Wardrobe"
                   variant="secondary"
-                  onPress={handleGenerateOutfit}
+                  onPress={handleGenerateWardrobe}
                   style={styles.heroButton}
                 />
               </LinearGradient>
@@ -106,23 +106,7 @@ export default function HomeScreen() {
                   <Text style={styles.actionSubtitle}>Add measurements & preferences</Text>
                 </PressScale>
 
-                <PressScale style={[styles.actionCard, { width: cardWidth }]} onPress={() => router.push('/setup')}>
-                  <View style={styles.actionIcon}>
-                    <Ionicons name="camera-outline" size={24} color={THEME.accent} />
-                  </View>
-                  <Text style={styles.actionTitle}>Upload Photos</Text>
-                  <Text style={styles.actionSubtitle}>For better outfit previews</Text>
-                </PressScale>
-
-                <PressScale style={[styles.actionCard, { width: cardWidth }]} onPress={() => router.push('/(tabs)/wardrobe')}>
-                  <View style={styles.actionIcon}>
-                    <Ionicons name="bag-outline" size={24} color={THEME.primary} />
-                  </View>
-                  <Text style={styles.actionTitle}>Build Wardrobe</Text>
-                  <Text style={styles.actionSubtitle}>Get AI recommendations</Text>
-                </PressScale>
-
-                <PressScale style={[styles.actionCard, { width: cardWidth }]}>
+                <PressScale style={[styles.actionCard, { width: cardWidth }]} onPress={() => router.push('/analytics')}>
                   <View style={styles.actionIcon}>
                     <Ionicons name="trending-up-outline" size={24} color={THEME.success} />
                   </View>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, FlatList, Dimensions } from 'react-native';
+import { View, StyleSheet, FlatList, Dimensions, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Screen } from '@/components/ui/Screen';
@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/layout/EmptyState';
 import { THEME } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
 import { isProfileComplete, getProfile } from '@/lib/profile';
-import { useWardrobe, buildWardrobe } from '@/lib/wardrobe';
+import { useWardrobe, buildWardrobe, markAsOwned, swapItem, removeWardrobeItem } from '@/lib/wardrobe';
 import type { WardrobeItem, ClothingCategory } from '@/lib/types';
 
 const { width } = Dimensions.get('window');
@@ -75,23 +75,44 @@ export default function WardrobeScreen() {
       <View style={styles.itemHeader}>
         <View style={[styles.categoryBadge, { backgroundColor: THEME.primaryMuted }]}>
           <Text style={[styles.categoryBadgeText, { color: THEME.primary }]}>
-            {item.category.toUpperCase()}
+            PHASE {item.priorityPhase ?? 1}
           </Text>
         </View>
-        <Ionicons 
-          name={getStatusIcon(item.status) as any} 
-          size={18} 
-          color={getStatusColor(item.status)} 
-        />
+        <View style={styles.itemHeaderRight}>
+          <Ionicons 
+            name={getStatusIcon(item.status) as any} 
+            size={18} 
+            color={getStatusColor(item.status)} 
+          />
+          <PressScale onPress={() => removeWardrobeItem(item.id)} hitSlop={10} style={{ marginLeft: 8 }}>
+            <Ionicons name="trash-outline" size={16} color={THEME.danger} />
+          </PressScale>
+        </View>
       </View>
       
-      <Text style={styles.itemName}>{item.name}</Text>
-      <Text style={styles.itemDetails}>{item.color} • {item.fit}</Text>
+      {item.imageUrl ? (
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: item.imageUrl }} style={styles.itemImage} />
+        </View>
+      ) : (
+        <View style={[styles.imageContainer, styles.imagePlaceholder]}>
+          <Ionicons name="image-outline" size={32} color={THEME.border} />
+        </View>
+      )}
+
+      <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+      <Text style={styles.itemDetails} numberOfLines={1}>{item.color} • Size {item.recommendedSize}</Text>
       <Text style={styles.itemBudget}>{item.budgetRange}</Text>
       
-      <View style={styles.itemFooter}>
-        <Text style={styles.itemQuantity}>Qty: {item.quantity}</Text>
-        <Text style={styles.itemStatus}>{item.status.charAt(0).toUpperCase() + item.status?.slice(1)}</Text>
+      <View style={styles.itemActions}>
+        {item.status !== 'owned' && (
+           <PressScale onPress={() => markAsOwned(item.id)} style={styles.actionButton}>
+              <Text style={styles.actionButtonText}>Own it</Text>
+           </PressScale>
+        )}
+        <PressScale onPress={() => swapItem(item.id)} style={styles.actionButtonSecondary}>
+           <Text style={styles.actionButtonTextSecondary}>Swap</Text>
+        </PressScale>
       </View>
     </PressScale>
   );
@@ -120,7 +141,7 @@ export default function WardrobeScreen() {
 
   return (
     <Screen scroll={false}>
-      <AnimatedScreen>
+      <AnimatedScreen style={{ flex: 1 }}>
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
@@ -196,7 +217,7 @@ export default function WardrobeScreen() {
             </SlideUp>
 
             {/* Wardrobe Items */}
-            <SlideUp>
+            <SlideUp style={{ flex: 1 }}>
               {filteredItems.length > 0 ? (
                 <FlatList
                   data={filteredItems}
@@ -239,6 +260,7 @@ export default function WardrobeScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     paddingHorizontal: Layout.spacing.lg,
     paddingTop: Layout.spacing.xl,
   },
@@ -335,6 +357,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
   },
+  itemHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  imageContainer: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: Layout.borderRadius.sm,
+    overflow: 'hidden',
+    marginBottom: Layout.spacing.sm,
+    backgroundColor: THEME.surfaceElevated,
+  },
+  imagePlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  itemImage: {
+    width: '100%',
+    height: '100%',
+  },
   itemName: {
     fontSize: 14,
     fontWeight: '600',
@@ -352,19 +394,36 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: Layout.spacing.sm,
   },
-  itemFooter: {
+  itemActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: Layout.spacing.xs,
+    marginTop: Layout.spacing.xs,
+  },
+  actionButton: {
+    flex: 1,
+    backgroundColor: THEME.primary,
+    paddingVertical: 6,
+    borderRadius: 4,
     alignItems: 'center',
   },
-  itemQuantity: {
-    fontSize: 11,
-    color: THEME.textMuted,
-  },
-  itemStatus: {
+  actionButtonText: {
+    color: THEME.onPrimary,
     fontSize: 11,
     fontWeight: '600',
-    color: THEME.primary,
+  },
+  actionButtonSecondary: {
+    flex: 1,
+    backgroundColor: THEME.surfaceElevated,
+    paddingVertical: 6,
+    borderRadius: 4,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+  actionButtonTextSecondary: {
+    color: THEME.text,
+    fontSize: 11,
+    fontWeight: '600',
   },
   generateButton: {
     marginTop: Layout.spacing.lg,

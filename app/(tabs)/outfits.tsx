@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, StyleSheet, ScrollView, Image, Dimensions } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, Dimensions, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { Screen } from '@/components/ui/Screen';
@@ -10,7 +10,7 @@ import { AnimatedScreen, SlideUp, Stagger, PressScale } from '@/components/ui/Mo
 import { EmptyState } from '@/components/layout/EmptyState';
 import { THEME } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
-import { getOutfits, formatTimeAgo } from '@/lib/outfits';
+import { getOutfits, formatTimeAgo, generateOutfit, removeOutfit } from '@/lib/outfits';
 import type { Outfit, OutfitOccasion } from '@/lib/types';
 
 const { width } = Dimensions.get('window');
@@ -30,6 +30,8 @@ const occasions: { key: OutfitOccasion; label: string; icon: string }[] = [
 
 export default function OutfitsScreen() {
   const [selectedOccasion, setSelectedOccasion] = useState<OutfitOccasion>('casual');
+  const [selectedVibe, setSelectedVibe] = useState('Standard');
+  const [modalVisible, setModalVisible] = useState(false);
   const [outfits, setOutfits] = useState<Outfit[]>(() => getOutfits());
 
   // Refresh the list whenever the screen regains focus (e.g. after coming back
@@ -40,10 +42,19 @@ export default function OutfitsScreen() {
     }, []),
   );
 
-  const handleGenerateOutfit = () => {
-    // Always walk the user through the steps (measurements, style, budget,
-    // photos) for the chosen occasion so they can generate their wardrobe.
-    router.push(`/setup?occasion=${selectedOccasion}`);
+  const handleConfirmGenerate = () => {
+    setModalVisible(false);
+    // Simulate slight loading feel, though generation is synchronous
+    setTimeout(() => {
+      const newOutfit = generateOutfit(selectedOccasion);
+      setOutfits(getOutfits());
+      router.push(`/outfit/${newOutfit.id}`);
+    }, 300);
+  };
+
+  const handleRemoveOutfit = (id: string) => {
+    removeOutfit(id);
+    setOutfits(getOutfits());
   };
 
   const renderOutfit = (outfit: Outfit) => (
@@ -61,7 +72,12 @@ export default function OutfitsScreen() {
         </View>
       </View>
       <View style={styles.outfitInfo}>
-        <Text style={styles.outfitName}>{outfit.name}</Text>
+        <View style={styles.outfitInfoHeader}>
+          <Text style={styles.outfitName}>{outfit.name}</Text>
+          <PressScale onPress={() => handleRemoveOutfit(outfit.id)} hitSlop={10}>
+            <Ionicons name="trash-outline" size={16} color={THEME.danger} />
+          </PressScale>
+        </View>
         <Text style={styles.outfitTime}>{formatTimeAgo(outfit.createdAt)}</Text>
       </View>
     </PressScale>
@@ -96,46 +112,13 @@ export default function OutfitsScreen() {
                 </Card>
               </SlideUp>
 
-              {/* Occasion Selection */}
-              <SlideUp>
-                <Text style={styles.sectionTitle}>Select Occasion</Text>
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.occasionsContainer}
-                >
-                  {occasions?.map((occasion) => (
-                    <PressScale 
-                      key={occasion.key}
-                      style={[
-                        styles.occasionChip,
-                        selectedOccasion === occasion.key && { backgroundColor: THEME.primary }
-                      ]}
-                      onPress={() => setSelectedOccasion(occasion.key)}
-                    >
-                      <Ionicons 
-                        name={occasion.icon as any} 
-                        size={16} 
-                        color={selectedOccasion === occasion.key ? THEME.onPrimary : THEME.textMuted} 
-                      />
-                      <Text style={[
-                        styles.occasionChipText,
-                        { color: selectedOccasion === occasion.key ? THEME.onPrimary : THEME.textMuted }
-                      ]}>
-                        {occasion.label}
-                      </Text>
-                    </PressScale>
-                  ))}
-                </ScrollView>
-              </SlideUp>
-
               {/* Generate Button */}
               <SlideUp>
                 <Button
-                  title="Generate Outfit"
+                  title="Create New Outfit"
                   variant="primary"
-                  onPress={handleGenerateOutfit}
-                  icon={<Ionicons name="sparkles" size={18} color={THEME.onPrimary} />}
+                  onPress={() => setModalVisible(true)}
+                  icon={<Ionicons name="color-wand-outline" size={18} color={THEME.onPrimary} />}
                   style={styles.generateButton}
                 />
               </SlideUp>
@@ -158,8 +141,8 @@ export default function OutfitsScreen() {
                     icon="sparkles-outline"
                     title="No outfits yet"
                     message="Generate your first AI-powered outfit to get started"
-                    actionTitle="Generate Outfit"
-                    onAction={handleGenerateOutfit}
+                    actionTitle="Create Outfit"
+                    onAction={() => setModalVisible(true)}
                   />
                 )}
               </SlideUp>
@@ -205,6 +188,83 @@ export default function OutfitsScreen() {
           </ScrollView>
         </View>
       </AnimatedScreen>
+
+      {/* Generation Modal */}
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Design Your Look</Text>
+              <PressScale onPress={() => setModalVisible(false)} style={styles.closeButton}>
+                <Ionicons name="close" size={24} color={THEME.text} />
+              </PressScale>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
+              <Text style={styles.modalSectionTitle}>What's the occasion?</Text>
+              <View style={styles.modalGrid}>
+                {occasions.map((occ) => (
+                  <PressScale 
+                    key={occ.key}
+                    style={[
+                      styles.modalChip,
+                      selectedOccasion === occ.key && styles.modalChipActive
+                    ]}
+                    onPress={() => setSelectedOccasion(occ.key)}
+                  >
+                    <Ionicons 
+                      name={occ.icon as any} 
+                      size={20} 
+                      color={selectedOccasion === occ.key ? THEME.onPrimary : THEME.textMuted} 
+                    />
+                    <Text style={[
+                      styles.modalChipText,
+                      selectedOccasion === occ.key && styles.modalChipTextActive
+                    ]}>
+                      {occ.label}
+                    </Text>
+                  </PressScale>
+                ))}
+              </View>
+
+              <Text style={styles.modalSectionTitle}>Vibe (Optional)</Text>
+              <View style={styles.modalGrid}>
+                {['Standard', 'Edgy', 'Minimalist', 'Old Money'].map((vibe) => (
+                  <PressScale 
+                    key={vibe}
+                    style={[
+                      styles.modalChip,
+                      selectedVibe === vibe && styles.modalChipActive
+                    ]}
+                    onPress={() => setSelectedVibe(vibe)}
+                  >
+                    <Text style={[
+                      styles.modalChipText,
+                      selectedVibe === vibe && styles.modalChipTextActive
+                    ]}>
+                      {vibe}
+                    </Text>
+                  </PressScale>
+                ))}
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <Button
+                title="Generate Now"
+                variant="primary"
+                onPress={handleConfirmGenerate}
+                icon={<Ionicons name="sparkles" size={18} color={THEME.onPrimary} />}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -338,11 +398,17 @@ const styles = StyleSheet.create({
   outfitInfo: {
     padding: Layout.spacing.md,
   },
+  outfitInfoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   outfitName: {
     fontSize: 14,
     fontWeight: '600',
     color: THEME.text,
-    marginBottom: 4,
+    flex: 1,
   },
   outfitTime: {
     fontSize: 12,
@@ -372,5 +438,84 @@ const styles = StyleSheet.create({
     color: THEME.textSecondary,
     textAlign: 'center',
     lineHeight: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: THEME.background,
+    borderTopLeftRadius: Layout.borderRadius.xl,
+    borderTopRightRadius: Layout.borderRadius.xl,
+    paddingTop: Layout.spacing.lg,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Layout.spacing.lg,
+    marginBottom: Layout.spacing.md,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: THEME.text,
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: THEME.surfaceElevated,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalScroll: {
+    paddingHorizontal: Layout.spacing.lg,
+    paddingBottom: Layout.spacing.xl,
+  },
+  modalSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.text,
+    marginTop: Layout.spacing.lg,
+    marginBottom: Layout.spacing.md,
+  },
+  modalGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Layout.spacing.sm,
+  },
+  modalChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Layout.spacing.sm,
+    paddingHorizontal: Layout.spacing.md,
+    paddingVertical: Layout.spacing.md,
+    borderRadius: Layout.borderRadius.lg,
+    backgroundColor: THEME.surface,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    minWidth: '48%',
+  },
+  modalChipActive: {
+    backgroundColor: THEME.primary,
+    borderColor: THEME.primary,
+  },
+  modalChipText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: THEME.text,
+  },
+  modalChipTextActive: {
+    color: THEME.onPrimary,
+  },
+  modalFooter: {
+    padding: Layout.spacing.lg,
+    paddingBottom: Layout.spacing.xxl,
+    backgroundColor: THEME.surface,
+    borderTopWidth: 1,
+    borderTopColor: THEME.border,
   },
 });

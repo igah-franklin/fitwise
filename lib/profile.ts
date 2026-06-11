@@ -29,6 +29,7 @@ export interface UserProfile {
   primaryStyle: StyleType;
   secondaryStyles: StyleType[];
   budget: BudgetRange;
+  existingBasics?: string[];
   photos: ProfilePhotos;
   completedAt?: string;
 }
@@ -48,6 +49,7 @@ export function emptyProfile(): UserProfile {
     primaryStyle: 'smart-casual',
     secondaryStyles: [],
     budget: 'mid-range',
+    existingBasics: [],
     photos: {},
   };
 }
@@ -93,6 +95,11 @@ export async function saveProfile(profile: UserProfile): Promise<void> {
     // Keep the in-memory copy even if persistence fails.
   }
   emit();
+}
+
+export async function updateProfile(updates: Partial<UserProfile>): Promise<void> {
+  const current = getProfile() ?? emptyProfile();
+  await saveProfile({ ...current, ...updates });
 }
 
 export async function clearProfile(): Promise<void> {
@@ -158,6 +165,15 @@ export const BUDGET_OPTIONS: {
     description: 'Elevated, investment-grade wardrobe',
     icon: 'diamond-outline',
   },
+];
+
+export const COMMON_BASICS = [
+  { key: 'whiteTee', label: 'White T-Shirt' },
+  { key: 'darkDenim', label: 'Dark Wash Jeans' },
+  { key: 'whiteSneakers', label: 'White Sneakers' },
+  { key: 'navyBlazer', label: 'Navy Blazer' },
+  { key: 'navyChinos', label: 'Navy Chinos' },
+  { key: 'whiteOxford', label: 'White Oxford Shirt' },
 ];
 
 export function styleLabel(style: StyleType): string {

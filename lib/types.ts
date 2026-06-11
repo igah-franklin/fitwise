@@ -29,6 +29,7 @@ export interface StylePreferences {
   primaryStyle: StyleType;
   secondaryStyles: StyleType[];
   budget: BudgetRange;
+  existingBasics?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -64,6 +65,9 @@ export interface WardrobeItem {
   budgetRange: string;
   shoppingRecommendation: string;
   status: ItemStatus;
+  priorityPhase?: 1 | 2 | 3;
+  recommendedSize?: string;
+  imageUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -84,6 +88,11 @@ export interface Outfit {
   occasion: OutfitOccasion;
   items: OutfitItem[];
   previewUrl?: string;
+  feedback?: 'like' | 'dislike';
+  weatherContext?: {
+    temp: number;
+    condition: string;
+  };
   createdAt: string;
 }
 

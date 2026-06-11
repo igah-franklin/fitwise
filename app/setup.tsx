@@ -27,6 +27,7 @@ import {
   emptyProfile,
   STYLE_OPTIONS,
   BUDGET_OPTIONS,
+  COMMON_BASICS,
   type Measurements,
   type ProfilePhotos,
   type UserProfile,
@@ -39,6 +40,7 @@ const STEPS = [
   { title: 'Your Measurements', subtitle: 'So every recommendation fits you exactly.' },
   { title: 'Your Style', subtitle: 'Pick the looks you want to live in.' },
   { title: 'Your Budget', subtitle: 'We tailor prices and brands to your range.' },
+  { title: 'Existing Wardrobe', subtitle: 'Check off basics you already own so we don\'t recommend them again.' },
   { title: 'Your Photos', subtitle: 'Optional — preview outfits on your own body.' },
 ];
 
@@ -75,6 +77,7 @@ export default function SetupScreen() {
     existing?.secondaryStyles ?? [],
   );
   const [budget, setBudget] = useState<BudgetRange>(existing?.budget ?? 'mid-range');
+  const [existingBasics, setExistingBasics] = useState<string[]>(existing?.existingBasics ?? []);
   const [photos, setPhotos] = useState<ProfilePhotos>(existing?.photos ?? {});
 
   const isLastStep = step === STEPS.length - 1;
@@ -87,6 +90,12 @@ export default function SetupScreen() {
     // digits only
     const clean = value.replace(/[^0-9]/g, '');
     setMeasurements((prev) => ({ ...prev, [key]: clean }));
+  };
+
+  const toggleBasic = (basic: string) => {
+    setExistingBasics((prev) =>
+      prev.includes(basic) ? prev.filter((b) => b !== basic) : [...prev, basic],
+    );
   };
 
   const toggleSecondary = (style: StyleType) => {
@@ -148,13 +157,14 @@ export default function SetupScreen() {
     try {
       // Build the wardrobe first so the profile is only marked complete once
       // there's actually a wardrobe to shop from and generate outfits with.
-      await buildWardrobe({ primaryStyle, secondaryStyles, budget });
+      await buildWardrobe({ primaryStyle, secondaryStyles, budget, existingBasics });
 
       const profile: UserProfile = {
         measurements,
         primaryStyle,
         secondaryStyles,
         budget,
+        existingBasics,
         photos,
         completedAt: new Date().toISOString(),
       };
@@ -355,8 +365,41 @@ export default function SetupScreen() {
             </View>
           )}
 
-          {/* Step 3 — Photos */}
+          {/* Step 3 — Existing Wardrobe */}
           {step === 3 && (
+            <View>
+              <Text style={styles.groupLabel}>Select what you already own</Text>
+              <View style={styles.styleGrid}>
+                {COMMON_BASICS.map((opt) => {
+                  const active = existingBasics.includes(opt.key);
+                  return (
+                    <PressScale
+                      key={opt.key}
+                      style={[styles.styleChipOutline, active && styles.styleChipOutlineActive]}
+                      onPress={() => toggleBasic(opt.key)}
+                    >
+                      <Ionicons
+                        name={active ? 'checkmark-circle' : 'ellipse-outline'}
+                        size={18}
+                        color={active ? THEME.primary : THEME.textMuted}
+                      />
+                      <Text
+                        style={[
+                          styles.styleChipOutlineText,
+                          active && styles.styleChipOutlineTextActive,
+                        ]}
+                      >
+                        {opt.label}
+                      </Text>
+                    </PressScale>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
+          {/* Step 4 — Photos */}
+          {step === 4 && (
             <View style={styles.photoRow}>
               {(['front', 'side'] as const).map((slot) => {
                 const uri = photos[slot];
@@ -385,7 +428,7 @@ export default function SetupScreen() {
             </View>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <View style={styles.photoNote}>
               <Ionicons name="lock-closed-outline" size={14} color={THEME.textMuted} />
               <Text style={styles.photoNoteText}>

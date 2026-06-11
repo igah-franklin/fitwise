@@ -6,15 +6,17 @@ import {
   StyleSheet,
   type TouchableOpacityProps,
   type ViewStyle,
+  type TextStyle,
 } from 'react-native';
 import { THEME } from '@/lib/theme';
 
 interface ButtonProps extends TouchableOpacityProps {
   title: string;
-  variant?: 'primary' | 'secondary' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   icon?: React.ReactNode;
+  textStyle?: TextStyle;
 }
 
 export function Button({
@@ -25,6 +27,7 @@ export function Button({
   icon,
   disabled,
   style,
+  textStyle,
   ...props
 }: ButtonProps) {
   const buttonStyle: ViewStyle[] = [
@@ -54,7 +57,8 @@ export function Button({
         styles.text,
         sizeText[size],
         variantText[variant],
-        (icon || loading) ? styles.textWithIcon : undefined
+        (icon || loading) ? styles.textWithIcon : undefined,
+        textStyle,
       ]}>
         {title}
       </Text>
@@ -98,10 +102,12 @@ const variantStyles = StyleSheet.create({
   primary: { backgroundColor: THEME.primary },
   secondary: { backgroundColor: THEME.surface ?? '#F3F4F6' },
   ghost: { backgroundColor: 'transparent' },
+  outline: { backgroundColor: 'transparent', borderWidth: 1, borderColor: THEME.border },
 });
 
 const variantText = StyleSheet.create({
   primary: { color: THEME.onPrimary ?? '#FFFFFF' },
   secondary: { color: THEME.text },
   ghost: { color: THEME.primary },
+  outline: { color: THEME.text },
 });
