@@ -12,6 +12,7 @@ import { useTheme } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
 import { getOutfits, formatTimeAgo, generateOutfit, removeOutfit } from '@/lib/outfits';
 import type { Outfit, OutfitOccasion } from '@/lib/types';
+import { GeneratingOutfitScreen } from '@/components/GeneratingOutfitScreen';
 
 const { width } = Dimensions.get('window');
 // Account for both the Screen's outer padding and the container's inner padding,
@@ -34,6 +35,7 @@ export default function OutfitsScreen() {
   const [selectedOccasion, setSelectedOccasion] = useState<OutfitOccasion>('casual');
   const [selectedVibe, setSelectedVibe] = useState('Standard');
   const [modalVisible, setModalVisible] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [outfits, setOutfits] = useState<Outfit[]>(() => getOutfits());
 
   // Refresh the list whenever the screen regains focus (e.g. after coming back
@@ -46,11 +48,14 @@ export default function OutfitsScreen() {
 
   const handleConfirmGenerate = async () => {
     setModalVisible(false);
+    setIsGenerating(true);
     try {
       const newOutfit = await generateOutfit(selectedOccasion);
       setOutfits(getOutfits());
+      setIsGenerating(false);
       router.push(`/outfit/${newOutfit.id}`);
     } catch (e: any) {
+      setIsGenerating(false);
       alert(`Generation Error: ${e.message}`);
     }
   };
@@ -85,6 +90,10 @@ export default function OutfitsScreen() {
       </View>
     </PressScale>
   );
+
+  if (isGenerating) {
+    return <GeneratingOutfitScreen />;
+  }
 
   return (
     <Screen>

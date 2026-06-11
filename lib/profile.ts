@@ -25,6 +25,7 @@ export interface ProfilePhotos {
 }
 
 export interface UserProfile {
+  gender: string;
   measurements: Measurements;
   primaryStyle: StyleType;
   secondaryStyles: StyleType[];
@@ -45,6 +46,7 @@ export const EMPTY_MEASUREMENTS: Measurements = {
 
 export function emptyProfile(): UserProfile {
   return {
+    gender: 'male',
     measurements: { ...EMPTY_MEASUREMENTS },
     primaryStyle: 'smart-casual',
     secondaryStyles: [],

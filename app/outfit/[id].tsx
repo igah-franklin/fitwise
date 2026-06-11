@@ -20,6 +20,7 @@ import {
   removeOutfit,
 } from '@/lib/outfits';
 import type { ClothingCategory, ItemStatus, OutfitItem } from '@/lib/types';
+import { GeneratingOutfitScreen } from '@/components/GeneratingOutfitScreen';
 
 const CATEGORY_ICON: Record<ClothingCategory, string> = {
   tops: 'shirt-outline',
@@ -131,6 +132,10 @@ export default function OutfitDetailsScreen() {
       </PressScale>
     );
   };
+
+  if (regenerating) {
+    return <GeneratingOutfitScreen />;
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

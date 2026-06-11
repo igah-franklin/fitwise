@@ -110,7 +110,7 @@ export async function hydrateOutfits(): Promise<Outfit[]> {
   try {
     const res = await api.get('/style/outfits');
     if (res.data && Array.isArray(res.data)) {
-      store = res.data;
+      store = res.data.map(o => ({ ...o, id: o._id || o.id }));
     }
   } catch {
     // fallback
@@ -151,38 +151,34 @@ const mockWeather = [
 ];
 
 let generatedCount = 0;
-
 /**
  * Generate a new outfit for the given occasion from the user's wardrobe, add it
  * to the store (newest first) and return it.
  */
 export async function generateOutfit(occasion: OutfitOccasion): Promise<Outfit> {
-  generatedCount += 1;
-  const id = `gen-${Date.now()}-${generatedCount}`;
-  const mockOutfit = makeOutfit(
-    id,
-    occasion,
-    GENERATED_NAMES[occasion],
-    new Date().toISOString(),
-    previewFor(occasion),
-  );
-  mockOutfit.weatherContext = mockWeather[Math.floor(Math.random() * mockWeather.length)];
+  const weatherContext = mockWeather[Math.floor(Math.random() * mockWeather.length)];
   
   try {
     const payload = {
-      name: mockOutfit.name,
-      occasion: mockOutfit.occasion,
-      items: mockOutfit.items.map(i => (i.wardrobeItem as any)._id).filter(Boolean),
-      weatherContext: mockOutfit.weatherContext,
+      occasion,
+      weatherContext,
     };
-    const res = await api.post('/style/outfits', payload);
+    
+    // Call our new AI generation endpoint
+    const res = await api.post('/style/outfits/generate', payload);
+    
     if (res.data) {
-      // Re-hydrate the items from the returned populated object, or just fetch again
-      await hydrateOutfits();
-      const newOutfit = store.find((o: any) => o._id === res.data._id);
-      return newOutfit || res.data;
+      // Re-hydrate the items from the returned populated object
+      const created = res.data;
+      created.id = created._id || created.id;
+      created.items = created.items.map((i: any) => ({
+        wardrobeItem: i.wardrobeItemId || i.wardrobeItem
+      }));
+      store.unshift(created);
+      return created;
+    } else {
+      throw new Error('No data returned from backend');
     }
-    throw new Error('No data returned from backend');
   } catch (e: any) {
     console.error('Failed to save outfit to backend', e.response?.data || e);
     // Throw the readable backend error up to the UI so it can alert the user

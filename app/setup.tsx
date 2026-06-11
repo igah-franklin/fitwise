@@ -124,6 +124,7 @@ export default function SetupScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
 
+  const [gender, setGender] = useState<string>(existing?.gender ?? 'male');
   const [measurements, setMeasurements] = useState<Measurements>(
     () => existing?.measurements ?? emptyProfile().measurements,
   );
@@ -223,6 +224,7 @@ export default function SetupScreen() {
         budget,
         existingBasics,
         photos,
+        gender,
         completedAt: new Date().toISOString(),
       };
       await saveProfile(profile);
@@ -286,24 +288,50 @@ export default function SetupScreen() {
 
           {/* Step 0 — Measurements */}
           {step === 0 && (
-            <View style={styles.measureGrid}>
-              {MEASUREMENT_FIELDS.map((field) => {
-                const hasError = showErrors && field.required && !measurements[field.key].trim();
-                return (
-                  <Input
-                    key={field.key}
-                    style={styles.measureField}
-                    label={`${field.label}${field.required ? '' : ' (optional)'}`}
-                    value={measurements[field.key]}
-                    onChangeText={(v) => updateMeasurement(field.key, v)}
-                    placeholder={field.placeholder}
-                    keyboardType="number-pad"
-                    hint={field.unit}
-                    error={hasError ? 'Required' : undefined}
-                    maxLength={3}
-                  />
-                );
-              })}
+            <View>
+              <Text style={styles.groupLabel}>Gender</Text>
+              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+                {['male', 'female'].map(g => (
+                  <PressScale
+                    key={g}
+                    style={[
+                      styles.styleChip,
+                      { flex: 1, paddingVertical: 12, justifyContent: 'center' },
+                      gender === g && styles.styleChipActive
+                    ]}
+                    onPress={() => setGender(g)}
+                  >
+                    <Text style={[
+                      styles.styleChipText,
+                      { fontSize: 14, textTransform: 'capitalize' },
+                      gender === g && styles.styleChipTextActive
+                    ]}>
+                      {g}
+                    </Text>
+                  </PressScale>
+                ))}
+              </View>
+
+              <Text style={styles.groupLabel}>Measurements</Text>
+              <View style={styles.measureGrid}>
+                {MEASUREMENT_FIELDS.map((field) => {
+                  const hasError = showErrors && field.required && !measurements[field.key].trim();
+                  return (
+                    <Input
+                      key={field.key}
+                      style={styles.measureField}
+                      label={`${field.label}${field.required ? '' : ' (optional)'}`}
+                      value={measurements[field.key]}
+                      onChangeText={(v) => updateMeasurement(field.key, v)}
+                      placeholder={field.placeholder}
+                      keyboardType="number-pad"
+                      hint={field.unit}
+                      error={hasError ? 'Required' : undefined}
+                      maxLength={3}
+                    />
+                  );
+                })}
+              </View>
             </View>
           )}
 
