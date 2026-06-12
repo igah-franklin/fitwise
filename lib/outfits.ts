@@ -181,6 +181,7 @@ export async function generateOutfit(occasion: OutfitOccasion): Promise<Outfit> 
       const created = res.data;
       created.id = created._id || created.id;
       created.items = created.items.map((i: any) => ({
+        ...i,
         wardrobeItem: i.wardrobeItemId || i.wardrobeItem
       }));
       store.unshift(created);
@@ -215,7 +216,8 @@ function parseBudget(range: string): { min: number; max: number } {
 export function estimateOutfitBudget(outfit: Outfit): { min: number; max: number } {
   return outfit.items.reduce(
     (acc, item) => {
-      const { min, max } = parseBudget(item.wardrobeItem.budgetRange);
+      if (!item.wardrobeItem) return acc;
+      const { min, max } = parseBudget(item.wardrobeItem.budgetRange || '');
       return { min: acc.min + min, max: acc.max + max };
     },
     { min: 0, max: 0 },
