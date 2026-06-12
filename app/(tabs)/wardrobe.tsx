@@ -117,17 +117,17 @@ export default function WardrobeScreen() {
           </Text>
         </View>
         <View style={styles.itemHeaderRight}>
-          <Ionicons 
-            name={getStatusIcon(item.status) as any} 
-            size={18} 
-            color={getStatusColor(item.status)} 
+          <Ionicons
+            name={getStatusIcon(item.status) as any}
+            size={18}
+            color={getStatusColor(item.status)}
           />
           <PressScale onPress={() => removeWardrobeItem((item as any)._id || item.id)} hitSlop={10} style={{ marginLeft: 8 }}>
             <Ionicons name="trash-outline" size={16} color={theme.danger} />
           </PressScale>
         </View>
       </View>
-      
+
       {item.imageUrl ? (
         <SkeletonImage uri={item.imageUrl} style={styles.imageContainer} theme={theme} />
       ) : (
@@ -139,32 +139,32 @@ export default function WardrobeScreen() {
       <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
       <Text style={styles.itemDetails} numberOfLines={1}>{item.color} • Size {item.recommendedSize}</Text>
       <Text style={styles.itemBudget}>{item.budgetRange}</Text>
-      
+
       <View style={styles.itemActions}>
         {item.status !== 'owned' && (
-           <PressScale onPress={() => markAsOwned((item as any)._id || item.id)} style={styles.actionButton}>
-              <Text style={styles.actionButtonText}>Own it</Text>
-           </PressScale>
+          <PressScale onPress={() => markAsOwned((item as any)._id || item.id)} style={styles.actionButton}>
+            <Text style={styles.actionButtonText}>Own it</Text>
+          </PressScale>
         )}
         <PressScale onPress={() => swapItem((item as any)._id || item.id)} style={styles.actionButtonSecondary}>
-           <Text style={styles.actionButtonTextSecondary}>Swap</Text>
+          <Text style={styles.actionButtonTextSecondary}>Swap</Text>
         </PressScale>
       </View>
     </PressScale>
   );
 
   const renderCategoryFilter = ({ item }: { item: typeof categories[0] }) => (
-    <PressScale 
+    <PressScale
       style={[
         styles.filterChip,
         selectedCategory === item.key && { backgroundColor: theme.primary }
       ]}
       onPress={() => setSelectedCategory(item.key)}
     >
-      <Ionicons 
-        name={item.icon as any} 
-        size={16} 
-        color={selectedCategory === item.key ? theme.onPrimary : theme.textMuted} 
+      <Ionicons
+        name={item.icon as any}
+        size={16}
+        color={selectedCategory === item.key ? theme.onPrimary : theme.textMuted}
       />
       <Text style={[
         styles.filterChipText,
@@ -189,104 +189,104 @@ export default function WardrobeScreen() {
 
           {wardrobeItems.length === 0 ? (
             <EmptyState
-              icon="sparkles-outline"
+              icon="shirt-outline"
               title="Build your wardrobe"
               message="Tell us your measurements, style and budget and we'll create a personalized wardrobe you can shop from."
               actionTitle="Get Started"
               onAction={() => router.push('/setup')}
             />
           ) : (
-          <Stagger step={60} initialDelay={100}>
-            <SlideUp>
-              <View style={styles.filtersContainer}>
-                <PressScale 
-                  style={[
-                    styles.filterChip,
-                    selectedCategory === 'all' && { backgroundColor: theme.primary }
-                  ]}
-                  onPress={() => setSelectedCategory('all')}
-                >
-                  <Ionicons 
-                    name="apps-outline" 
-                    size={16} 
-                    color={selectedCategory === 'all' ? theme.onPrimary : theme.textMuted} 
+            <Stagger step={60} initialDelay={100}>
+              <SlideUp>
+                <View style={styles.filtersContainer}>
+                  <PressScale
+                    style={[
+                      styles.filterChip,
+                      selectedCategory === 'all' && { backgroundColor: theme.primary }
+                    ]}
+                    onPress={() => setSelectedCategory('all')}
+                  >
+                    <Ionicons
+                      name="apps-outline"
+                      size={16}
+                      color={selectedCategory === 'all' ? theme.onPrimary : theme.textMuted}
+                    />
+                    <Text style={[
+                      styles.filterChipText,
+                      { color: selectedCategory === 'all' ? theme.onPrimary : theme.textMuted }
+                    ]}>
+                      All
+                    </Text>
+                  </PressScale>
+
+                  <FlatList
+                    data={categories}
+                    renderItem={renderCategoryFilter}
+                    keyExtractor={(item) => item.key}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.filtersList}
                   />
-                  <Text style={[
-                    styles.filterChipText,
-                    { color: selectedCategory === 'all' ? theme.onPrimary : theme.textMuted }
-                  ]}>
-                    All
-                  </Text>
-                </PressScale>
-                
-                <FlatList
-                  data={categories}
-                  renderItem={renderCategoryFilter}
-                  keyExtractor={(item) => item.key}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.filtersList}
-                />
-              </View>
-            </SlideUp>
+                </View>
+              </SlideUp>
 
-            {/* Stats */}
-            <SlideUp>
-              <View style={styles.statsRow}>
-                <Card style={styles.statCard} padding="md">
-                  <Text style={styles.statNumber}>{wardrobeItems.length}</Text>
-                  <Text style={styles.statLabel}>Total Items</Text>
-                </Card>
-                <Card style={styles.statCard} padding="md">
-                  <Text style={styles.statNumber}>
-                    {wardrobeItems?.filter(item => item.status === 'owned').length}
-                  </Text>
-                  <Text style={styles.statLabel}>Owned</Text>
-                </Card>
-                <Card style={styles.statCard} padding="md">
-                  <Text style={styles.statNumber}>
-                    {wardrobeItems?.filter(item => item.status === 'recommended').length}
-                  </Text>
-                  <Text style={styles.statLabel}>To Buy</Text>
-                </Card>
-              </View>
-            </SlideUp>
+              {/* Stats */}
+              <SlideUp>
+                <View style={styles.statsRow}>
+                  <Card style={styles.statCard} padding="md">
+                    <Text style={styles.statNumber}>{wardrobeItems.length}</Text>
+                    <Text style={styles.statLabel}>Total Items</Text>
+                  </Card>
+                  <Card style={styles.statCard} padding="md">
+                    <Text style={styles.statNumber}>
+                      {wardrobeItems?.filter(item => item.status === 'owned').length}
+                    </Text>
+                    <Text style={styles.statLabel}>Owned</Text>
+                  </Card>
+                  <Card style={styles.statCard} padding="md">
+                    <Text style={styles.statNumber}>
+                      {wardrobeItems?.filter(item => item.status === 'recommended').length}
+                    </Text>
+                    <Text style={styles.statLabel}>To Buy</Text>
+                  </Card>
+                </View>
+              </SlideUp>
 
-            {/* Wardrobe Items */}
-            <SlideUp style={{ flex: 1 }}>
-              {filteredItems.length > 0 ? (
-                <FlatList
-                  data={filteredItems}
-                  renderItem={renderWardrobeItem}
-                  keyExtractor={(item, index) => (item as any)._id || item.id || index.toString()}
-                  numColumns={2}
-                  columnWrapperStyle={styles.row}
-                  contentContainerStyle={styles.itemsList}
-                  showsVerticalScrollIndicator={false}
-                />
-              ) : (
-                <EmptyState
-                  icon="shirt-outline"
-                  title="No items found"
-                  message="No wardrobe items match your current filter"
-                  actionTitle="View All Items"
-                  onAction={() => setSelectedCategory('all')}
-                />
-              )}
-            </SlideUp>
+              {/* Wardrobe Items */}
+              <SlideUp style={{ flex: 1 }}>
+                {filteredItems.length > 0 ? (
+                  <FlatList
+                    data={filteredItems}
+                    renderItem={renderWardrobeItem}
+                    keyExtractor={(item, index) => (item as any)._id || item.id || index.toString()}
+                    numColumns={2}
+                    columnWrapperStyle={styles.row}
+                    contentContainerStyle={styles.itemsList}
+                    showsVerticalScrollIndicator={false}
+                  />
+                ) : (
+                  <EmptyState
+                    icon="shirt-outline"
+                    title="No items found"
+                    message="No wardrobe items match your current filter"
+                    actionTitle="View All Items"
+                    onAction={() => setSelectedCategory('all')}
+                  />
+                )}
+              </SlideUp>
 
-            {/* Regenerate Wardrobe Button */}
-            <SlideUp>
-              <Button
-                title={rebuilding ? 'Regenerating…' : 'Regenerate Wardrobe'}
-                variant="primary"
-                loading={rebuilding}
-                onPress={handleGenerateWardrobe}
-                icon={<Ionicons name="sparkles" size={18} color={theme.onPrimary} />}
-                style={styles.generateButton}
-              />
-            </SlideUp>
-          </Stagger>
+              {/* Regenerate Wardrobe Button */}
+              <SlideUp>
+                <Button
+                  title={rebuilding ? 'Regenerating…' : 'Regenerate Wardrobe'}
+                  variant="primary"
+                  loading={rebuilding}
+                  onPress={handleGenerateWardrobe}
+                  icon={<Ionicons name="sparkles" size={18} color={theme.onPrimary} />}
+                  style={styles.generateButton}
+                />
+              </SlideUp>
+            </Stagger>
           )}
         </View>
       </AnimatedScreen>

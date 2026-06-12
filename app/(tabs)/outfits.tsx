@@ -148,7 +148,7 @@ export default function OutfitsScreen() {
                   </View>
                 ) : (
                   <EmptyState
-                    icon="sparkles-outline"
+                    icon="shirt-outline"
                     title="No outfits yet"
                     message="Generate your first AI-powered outfit to get started"
                     actionTitle="Create Outfit"

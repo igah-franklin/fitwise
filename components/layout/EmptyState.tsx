@@ -13,7 +13,7 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({
-  icon = 'file-tray-outline',
+  icon = 'shirt-outline',
   title,
   message,
   actionTitle,
