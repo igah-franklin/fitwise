@@ -94,9 +94,9 @@ function GeneratingWardrobeScreen({ theme }: { theme: any }) {
   return (
     <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
       <Animated.View style={[styles.pulseCircle, { backgroundColor: theme.primary }, pulseStyle]} />
-      <View style={[styles.iconContainer, { backgroundColor: theme.card }]}>
+      {/* <View style={[styles.iconContainer, { backgroundColor: theme.card }]}>
         <Ionicons name="sparkles" size={48} color={theme.primary} />
-      </View>
+      </View> */}
 
       <Animated.Text entering={FadeIn.duration(500)} style={styles.loadingTitle}>
         Building your wardrobe

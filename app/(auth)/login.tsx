@@ -22,21 +22,25 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = React.useState(false);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS,
     androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID,
   });
 
   React.useEffect(() => {
     if (response?.type === 'success') {
-      const { id_token } = response.params;
-      handleGoogleSignIn(id_token);
+      const { code } = response.params;
+      handleGoogleSignIn(code);
     }
   }, [response]);
 
-  const handleGoogleSignIn = async (idToken: string) => {
+  const handleGoogleSignIn = async (code: string) => {
     try {
-      const res = await api.post('/auth/google', { idToken });
+      const res = await api.post('/auth/google', { 
+        code,
+        redirectUri: request?.redirectUri,
+        codeVerifier: request?.codeVerifier,
+        platform: Platform.OS
+      });
       await signIn(res.data.token, res.data);
     } catch (error) {
       console.error('Google Sign In Failed', error);

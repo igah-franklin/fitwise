@@ -140,6 +140,11 @@ export const STYLE_OPTIONS: { key: StyleType; label: string; icon: string }[] = 
   { key: 'streetwear', label: 'Streetwear', icon: 'walk-outline' },
   { key: 'classic', label: 'Classic', icon: 'ribbon-outline' },
   { key: 'modern', label: 'Modern', icon: 'sparkles-outline' },
+  { key: 'church', label: 'Church', icon: 'book-outline' },
+  // { key: 'agbada', label: 'Agbada', icon: 'body-outline' },
+  { key: 'athleisure', label: 'Athleisure', icon: 'bicycle-outline' },
+  { key: 'preppy', label: 'Preppy', icon: 'school-outline' },
+  { key: 'formal', label: 'Formal', icon: 'star-outline' },
 ];
 
 export const BUDGET_OPTIONS: {
@@ -149,28 +154,28 @@ export const BUDGET_OPTIONS: {
   description: string;
   icon: string;
 }[] = [
-  {
-    key: 'budget',
-    label: 'Budget',
-    range: 'Under $400 / outfit',
-    description: 'Great value staples from accessible brands',
-    icon: 'pricetag-outline',
-  },
-  {
-    key: 'mid-range',
-    label: 'Mid-range',
-    range: '$400 – $800 / outfit',
-    description: 'Quality pieces that balance price and longevity',
-    icon: 'pricetags-outline',
-  },
-  {
-    key: 'premium',
-    label: 'Premium',
-    range: '$800+ / outfit',
-    description: 'Elevated, investment-grade wardrobe',
-    icon: 'diamond-outline',
-  },
-];
+    {
+      key: 'budget',
+      label: 'Budget',
+      range: 'Under $400 / outfit',
+      description: 'Great value staples from accessible brands',
+      icon: 'pricetag-outline',
+    },
+    {
+      key: 'mid-range',
+      label: 'Mid-range',
+      range: '$400 – $800 / outfit',
+      description: 'Quality pieces that balance price and longevity',
+      icon: 'pricetags-outline',
+    },
+    {
+      key: 'premium',
+      label: 'Premium',
+      range: '$800+ / outfit',
+      description: 'Elevated, investment-grade wardrobe',
+      icon: 'diamond-outline',
+    },
+  ];
 
 export const COMMON_BASICS = [
   { key: 'whiteTee', label: 'White T-Shirt' },

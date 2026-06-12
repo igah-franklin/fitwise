@@ -41,7 +41,12 @@ export type StyleType =
   | 'minimalist' 
   | 'streetwear' 
   | 'classic' 
-  | 'modern';
+  | 'modern'
+  | 'church'
+  | 'agbada'
+  | 'athleisure'
+  | 'preppy'
+  | 'formal';
 
 export type BudgetRange = 'budget' | 'mid-range' | 'premium';
 
