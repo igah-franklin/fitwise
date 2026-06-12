@@ -63,7 +63,7 @@ export default function OutfitDetailsScreen() {
 
   const budget = estimateOutfitBudget(outfit);
   const ownedCount = outfit.items.filter(
-    (i) => i.wardrobeItem.status === 'owned' || i.wardrobeItem.status === 'purchased',
+    (i) => i.wardrobeItem && (i.wardrobeItem.status === 'owned' || i.wardrobeItem.status === 'purchased'),
   ).length;
   const toBuyCount = outfit.items.length - ownedCount;
 
@@ -104,6 +104,7 @@ export default function OutfitDetailsScreen() {
 
   const renderItem = (item: OutfitItem) => {
     const w = item.wardrobeItem;
+    if (!w) return null;
     const status = getStatusMeta(theme)[w.status] ?? getStatusMeta(theme).recommended;
     const icon = CATEGORY_ICON[w.category] ?? 'pricetag-outline';
 
