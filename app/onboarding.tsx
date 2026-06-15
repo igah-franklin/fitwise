@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Pressable } from 'react-native';
 import { ONBOARDING_SLIDES, ONBOARDING_CHROME } from '@/constants/Onboarding';
 import { Text } from '@/components/ui/Text';
+import { useOnboarded } from './_layout';
 
 const { width } = Dimensions.get('window');
 
@@ -45,6 +46,7 @@ export default function OnboardingScreen() {
   const [currentStep, setCurrentStep] = useState(0);
   const flatListRef = useRef<FlatList>(null);
   const slideAnimation = useRef(new RNAnimated.Value(0)).current;
+  const { setIsOnboarded } = useOnboarded();
   const insets = useSafeAreaInsets();
 
   const handleNext = () => {
@@ -68,20 +70,24 @@ export default function OnboardingScreen() {
   const handleComplete = async () => {
     try {
       await AsyncStorage.setItem('onboarded', '1');
-      router.replace('/(tabs)');
+      setIsOnboarded(true);
+      router.replace('/(auth)/login');
     } catch (error) {
       console.error('Error saving onboarding status:', error);
-      router.replace('/(tabs)');
+      setIsOnboarded(true);
+      router.replace('/(auth)/login');
     }
   };
 
   const handleSkip = async () => {
     try {
       await AsyncStorage.setItem('onboarded', '1');
-      router.replace('/(tabs)');
+      setIsOnboarded(true);
+      router.replace('/(auth)/login');
     } catch (error) {
       console.error('Error saving onboarding status:', error);
-      router.replace('/(tabs)');
+      setIsOnboarded(true);
+      router.replace('/(auth)/login');
     }
   };
 
@@ -203,7 +209,7 @@ export default function OnboardingScreen() {
       {/* Header overlay */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={[styles.brand, { color: ONBOARDING_SLIDES[currentStep].accentSolid }]}>
-          ✦ fitwise
+          ✦ WearThis
         </Text>
         <Pressable onPress={handleSkip} hitSlop={10}>
           <Text style={[styles.skip, {

@@ -47,7 +47,7 @@ export default function SignupScreen() {
     <Screen>
       <View style={styles.container}>
         <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Join Fitwise today</Text>
+        <Text style={styles.subtitle}>Join WearThis today</Text>
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 

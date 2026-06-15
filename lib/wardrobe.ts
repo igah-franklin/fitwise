@@ -70,7 +70,6 @@ export async function buildWardrobe(opts: {
   primaryStyle: StyleType;
   secondaryStyles: StyleType[];
   budget: BudgetRange;
-  existingBasics?: string[];
 }): Promise<WardrobeItem[]> {
   try {
     const res = await api.post('/style/wardrobe/generate', {

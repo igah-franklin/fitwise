@@ -5,7 +5,6 @@
 // hook for reactive UI.
 
 import { useEffect, useReducer } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { BudgetRange, StyleType } from './types';
 
 const STORAGE_KEY = 'user_style_profile';
@@ -30,7 +29,6 @@ export interface UserProfile {
   primaryStyle: StyleType;
   secondaryStyles: StyleType[];
   budget: BudgetRange;
-  existingBasics?: string[];
   photos: ProfilePhotos;
   completedAt?: string;
 }
@@ -51,7 +49,6 @@ export function emptyProfile(): UserProfile {
     primaryStyle: 'smart-casual',
     secondaryStyles: [],
     budget: 'mid-range',
-    existingBasics: [],
     photos: {},
   };
 }
@@ -88,6 +85,10 @@ export async function hydrateProfile(): Promise<UserProfile | null> {
 
 export function getProfile(): UserProfile | null {
   return cached;
+}
+
+export function isProfileHydrated(): boolean {
+  return hydrated;
 }
 
 export function isProfileComplete(): boolean {
