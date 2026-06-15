@@ -42,7 +42,6 @@ const STEPS = [
   { title: 'Your Measurements', subtitle: 'So every recommendation fits you exactly.' },
   { title: 'Your Style', subtitle: 'Pick the looks you want to live in.' },
   { title: 'Your Budget', subtitle: 'We tailor prices and brands to your range.' },
-  { title: 'Your Photos', subtitle: 'Optional — preview outfits on your own body.' },
 ];
 
 const MEASUREMENT_FIELDS: {
@@ -433,54 +432,11 @@ export default function SetupScreen() {
 
 
 
-          {/* Step 4 — Photos */}
-          {step === 4 && (
-            <View style={styles.photoRow}>
-              {(['front', 'side'] as const).map((slot) => {
-                const uri = photos[slot];
-                return (
-                  <PressScale key={slot} style={styles.photoSlot} onPress={() => pickPhoto(slot)}>
-                    {uri ? (
-                      <>
-                        <Image source={{ uri }} style={styles.photoImage} />
-                        <View style={styles.photoChange}>
-                          <Ionicons name="refresh" size={14} color="#fff" />
-                          <Text style={styles.photoChangeText}>Change</Text>
-                        </View>
-                      </>
-                    ) : (
-                      <View style={styles.photoEmpty}>
-                        <Ionicons name="camera-outline" size={28} color={theme.primary} />
-                        <Text style={styles.photoSlotLabel}>
-                          {slot === 'front' ? 'Front photo' : 'Side photo'}
-                        </Text>
-                        <Text style={styles.photoSlotHint}>Tap to add</Text>
-                      </View>
-                    )}
-                  </PressScale>
-                );
-              })}
-            </View>
-          )}
-
-          {step === 3 && (
-            <View style={styles.photoNote}>
-              <Ionicons name="lock-closed-outline" size={14} color={theme.textMuted} />
-              <Text style={styles.photoNoteText}>
-                Photos stay on your device and are only used to preview how outfits look on you.
-              </Text>
-            </View>
-          )}
         </ScrollView>
       </KeyboardAvoidingView>
 
       {/* Footer */}
       <View style={styles.footer}>
-        {isLastStep && (
-          <Pressable onPress={() => void handleSubmit()} hitSlop={8} style={styles.skipPhotos}>
-            <Text style={styles.skipPhotosText}>Skip for now</Text>
-          </Pressable>
-        )}
         <Button
           title={isLastStep ? 'Generate My Wardrobe' : 'Continue'}
           variant="primary"

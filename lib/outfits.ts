@@ -168,13 +168,14 @@ let generatedCount = 0;
  * Generate a new outfit for the given occasion from the user's wardrobe, add it
  * to the store (newest first) and return it.
  */
-export async function generateOutfit(occasion: OutfitOccasion): Promise<Outfit> {
+export async function generateOutfit(occasion: OutfitOccasion, photo?: string): Promise<Outfit> {
   const weatherContext = mockWeather[Math.floor(Math.random() * mockWeather.length)];
   
   try {
     const payload = {
       occasion,
       weatherContext,
+      photo,
     };
     
     // Call our new AI generation endpoint

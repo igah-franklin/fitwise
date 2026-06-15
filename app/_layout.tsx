@@ -141,6 +141,7 @@ function AuthGuard({ isOnboarded, themeName, theme }: { isOnboarded: boolean, th
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="outfit/[id]" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="setup" options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="outfit/create" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="paywall" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="+not-found" />
       </Stack>

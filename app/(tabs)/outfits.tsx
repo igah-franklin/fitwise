@@ -35,9 +35,6 @@ const occasions: { key: OutfitOccasion; label: string; icon: string }[] = [
 export default function OutfitsScreen() {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
-  const [selectedOccasion, setSelectedOccasion] = useState<OutfitOccasion>('casual');
-  const [modalVisible, setModalVisible] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [outfits, setOutfits] = useState<Outfit[]>(() => getOutfits());
   const [deleteOutfitId, setDeleteOutfitId] = useState<string | null>(null);
   
@@ -50,31 +47,6 @@ export default function OutfitsScreen() {
       setOutfits(getOutfits());
     }, []),
   );
-
-  const handleConfirmGenerate = async () => {
-    setModalVisible(false);
-    setIsGenerating(true);
-    try {
-      const newOutfit = await generateOutfit(selectedOccasion);
-      setOutfits(getOutfits());
-      setIsGenerating(false);
-      router.push(`/outfit/${newOutfit.id}`);
-    } catch (e: any) {
-      setIsGenerating(false);
-      if (e.message?.includes('limit') || e.message?.includes('generations') || e.message?.includes('403')) {
-        Alert.alert(
-          'Limit Reached',
-          'You have reached your limit of outfit generations for this month. Upgrade to Pro or Elite to generate more outfits!',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Upgrade Now', onPress: () => router.push('/paywall') }
-          ]
-        );
-      } else {
-        Alert.alert('Generation Error', e.message || 'Please try generating again.');
-      }
-    }
-  };
 
   const confirmRemoveOutfit = () => {
     if (deleteOutfitId) {
@@ -128,9 +100,7 @@ export default function OutfitsScreen() {
     </PressScale>
   );
 
-  if (isGenerating) {
-    return <GeneratingOutfitScreen />;
-  }
+
 
   return (
     <Screen>
@@ -170,7 +140,7 @@ export default function OutfitsScreen() {
                 <Button
                   title="Create New Outfit"
                   variant="primary"
-                  onPress={() => setModalVisible(true)}
+                  onPress={() => router.push('/outfit/create')}
                   icon={<Ionicons name="color-wand-outline" size={18} color={theme.onPrimary} />}
                   style={styles.generateButton}
                 />
@@ -192,7 +162,7 @@ export default function OutfitsScreen() {
                     title="No outfits yet"
                     message="Generate your first AI-powered outfit to get started"
                     actionTitle="Create Outfit"
-                    onAction={() => setModalVisible(true)}
+                    onAction={() => router.push('/outfit/create')}
                   />
                 )}
               </SlideUp>
@@ -238,71 +208,6 @@ export default function OutfitsScreen() {
           </ScrollView>
         </View>
       </AnimatedScreen>
-
-      {/* Generation Modal */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <BlurView intensity={40} tint="dark" style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            {/* Drag Handle Indicator */}
-            <View style={styles.modalDragHandle} />
-
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Design Your Look</Text>
-              <PressScale onPress={() => setModalVisible(false)} style={styles.closeButton}>
-                <Ionicons name="close" size={20} color={theme.text} />
-              </PressScale>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
-              <Text style={styles.modalSectionTitle}>What's the occasion?</Text>
-              <View style={styles.modalGrid}>
-                {occasions.map((occ) => (
-                  <PressScale
-                    key={occ.key}
-                    style={[
-                      styles.modalChip,
-                      selectedOccasion === occ.key && styles.modalChipActive
-                    ]}
-                    onPress={() => setSelectedOccasion(occ.key)}
-                  >
-                    <View style={[
-                      styles.modalChipIconContainer,
-                      selectedOccasion === occ.key && styles.modalChipIconContainerActive
-                    ]}>
-                      <Ionicons
-                        name={occ.icon as any}
-                        size={20}
-                        color={selectedOccasion === occ.key ? theme.onPrimary : theme.textMuted}
-                      />
-                    </View>
-                    <Text style={[
-                      styles.modalChipText,
-                      selectedOccasion === occ.key && styles.modalChipTextActive
-                    ]}>
-                      {occ.label}
-                    </Text>
-                  </PressScale>
-                ))}
-              </View>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <Button
-                title="Generate Outfit"
-                variant="primary"
-                onPress={handleConfirmGenerate}
-                icon={<Ionicons name="sparkles" size={18} color={theme.onPrimary} />}
-                style={styles.generateActionButton}
-              />
-            </View>
-          </View>
-        </BlurView>
-      </Modal>
 
       <ConfirmDeleteModal
         visible={!!deleteOutfitId}
