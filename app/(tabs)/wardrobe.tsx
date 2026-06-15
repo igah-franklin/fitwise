@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, FlatList, Dimensions, Image as RNImage } from 'react-native';
+import { View, StyleSheet, FlatList, Dimensions, Image as RNImage, Alert } from 'react-native';
 import Animated, { FadeIn, FadeOut, withRepeat, withTiming, useSharedValue, useAnimatedStyle, Easing } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +17,7 @@ import { useWardrobe, buildWardrobe, markAsOwned, swapItem, removeWardrobeItem }
 import type { WardrobeItem, ClothingCategory } from '@/lib/types';
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal';
 import { GeneratingWardrobeScreen } from '@/components/GeneratingScreen';
+import { UsageIndicator } from '@/components/UsageIndicator';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - Layout.spacing.lg * 3) / 2;
@@ -84,21 +85,26 @@ export default function WardrobeScreen() {
     ? wardrobeItems
     : wardrobeItems?.filter(item => item.category === selectedCategory);
 
-  const handleGenerateWardrobe = async () => {
-    const profile = getProfile();
-    if (!isProfileComplete() || !profile) {
-      router.push('/setup');
-      return;
-    }
-    setRebuilding(true);
+  const handleGenerateWardrobe = () => {
+    router.push('/setup');
+  };
+
+  const handleSwapItem = async (id: string) => {
     try {
-      await buildWardrobe({
-        primaryStyle: profile.primaryStyle,
-        secondaryStyles: profile.secondaryStyles,
-        budget: profile.budget,
-      });
-    } finally {
-      setRebuilding(false);
+      await swapItem(id);
+    } catch (error: any) {
+      if (error.message?.includes('limit') || error.message?.includes('generations') || error.message?.includes('403')) {
+        Alert.alert(
+          'Limit Reached',
+          'You have reached your limit of wardrobe item generations for this month. Upgrade to Pro or Elite to generate more items!',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Upgrade Now', onPress: () => router.push('/paywall') }
+          ]
+        );
+      } else {
+        Alert.alert('Error', error.message || 'Failed to swap item.');
+      }
     }
   };
 
@@ -158,7 +164,7 @@ export default function WardrobeScreen() {
             <Text style={styles.actionButtonText}>Own it</Text>
           </PressScale>
         )}
-        <PressScale onPress={() => swapItem((item as any)._id || item.id)} style={styles.actionButtonSecondary}>
+        <PressScale onPress={() => handleSwapItem((item as any)._id || item.id)} style={styles.actionButtonSecondary}>
           <Text style={styles.actionButtonTextSecondary}>Swap</Text>
         </PressScale>
       </View>
@@ -213,6 +219,10 @@ export default function WardrobeScreen() {
             />
           ) : (
             <Stagger step={60} initialDelay={100}>
+              <SlideUp>
+                <UsageIndicator type="wardrobe" />
+              </SlideUp>
+
               <SlideUp>
                 <View style={styles.filtersContainer}>
                   <PressScale

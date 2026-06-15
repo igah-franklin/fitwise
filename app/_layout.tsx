@@ -9,8 +9,10 @@ import { hydrateProfile, useProfile, isProfileHydrated } from '@/lib/profile';
 import { hydrateWardrobe } from '@/lib/wardrobe';
 import { hydrateOutfits } from '@/lib/outfits';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import { SubscriptionProvider } from '@/lib/subscription';
 
 SplashScreen.preventAutoHideAsync();
+
 
 interface OnboardingContextType {
   isOnboarded: boolean | null;
@@ -139,6 +141,7 @@ function AuthGuard({ isOnboarded, themeName, theme }: { isOnboarded: boolean, th
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="outfit/[id]" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="setup" options={{ animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="paywall" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="+not-found" />
       </Stack>
     </>
@@ -149,7 +152,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <RootApp />
+        <SubscriptionProvider>
+          <RootApp />
+        </SubscriptionProvider>
       </AuthProvider>
     </ThemeProvider>
   );

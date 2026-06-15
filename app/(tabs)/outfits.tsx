@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, StyleSheet, ScrollView, Image, Dimensions, Modal } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, Dimensions, Modal, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { BlurView } from 'expo-blur';
@@ -15,6 +15,7 @@ import { getOutfits, formatTimeAgo, generateOutfit, removeOutfit, toggleOutfitPi
 import type { Outfit, OutfitOccasion } from '@/lib/types';
 import { GeneratingOutfitScreen } from '@/components/GeneratingOutfitScreen';
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal';
+import { UsageIndicator } from '@/components/UsageIndicator';
 
 const { width } = Dimensions.get('window');
 // Account for both the Screen's outer padding and the container's inner padding,
@@ -60,7 +61,18 @@ export default function OutfitsScreen() {
       router.push(`/outfit/${newOutfit.id}`);
     } catch (e: any) {
       setIsGenerating(false);
-      alert(`Generation Error: ${e.message}`);
+      if (e.message?.includes('limit') || e.message?.includes('generations') || e.message?.includes('403')) {
+        Alert.alert(
+          'Limit Reached',
+          'You have reached your limit of outfit generations for this month. Upgrade to Pro or Elite to generate more outfits!',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Upgrade Now', onPress: () => router.push('/paywall') }
+          ]
+        );
+      } else {
+        Alert.alert('Generation Error', e.message || 'Please try generating again.');
+      }
     }
   };
 
@@ -134,6 +146,10 @@ export default function OutfitsScreen() {
 
           <ScrollView showsVerticalScrollIndicator={false}>
             <Stagger step={70} initialDelay={120}>
+              <SlideUp>
+                <UsageIndicator type="outfit" />
+              </SlideUp>
+
               {/* Generator Card */}
               <SlideUp>
                 <Card padding="lg" style={styles.generatorCard}>
