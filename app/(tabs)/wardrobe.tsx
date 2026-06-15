@@ -16,6 +16,7 @@ import { isProfileComplete, getProfile } from '@/lib/profile';
 import { useWardrobe, buildWardrobe, markAsOwned, swapItem, removeWardrobeItem } from '@/lib/wardrobe';
 import type { WardrobeItem, ClothingCategory } from '@/lib/types';
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal';
+import { GeneratingWardrobeScreen } from '@/components/GeneratingScreen';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - Layout.spacing.lg * 3) / 2;
@@ -185,6 +186,10 @@ export default function WardrobeScreen() {
       </Text>
     </PressScale>
   );
+
+  if (rebuilding) {
+    return <GeneratingWardrobeScreen />;
+  }
 
   return (
     <Screen scroll={false}>

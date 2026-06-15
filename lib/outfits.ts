@@ -129,7 +129,11 @@ export async function hydrateOutfits(): Promise<Outfit[]> {
 }
 
 export function getOutfits(): Outfit[] {
-  return [...store];
+  // Pinned outfits float to the top; within each group keep newest-first.
+  return [...store].sort((a, b) => {
+    if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
 }
 
 export function getOutfitById(id: string): Outfit | undefined {
@@ -197,11 +201,41 @@ export async function generateOutfit(occasion: OutfitOccasion): Promise<Outfit> 
   }
 }
 
-export function updateOutfitFeedback(id: string, feedback: 'like' | 'dislike'): void {
-  const outfit = store.find((o) => o.id === id);
-  if (outfit) {
-    outfit.feedback = feedback;
+/**
+ * Record a thumbs up/down for an outfit. Updates the local store immediately so
+ * the UI reflects the choice, then persists to the backend. Toggling the same
+ * value again clears the feedback.
+ */
+export async function updateOutfitFeedback(
+  id: string,
+  feedback: 'like' | 'dislike',
+): Promise<void> {
+  const outfit = store.find((o) => o.id === id || (o as any)._id === id);
+  if (!outfit) return;
+  const next = outfit.feedback === feedback ? undefined : feedback;
+  outfit.feedback = next;
+  try {
+    await api.put(`/style/outfits/${(outfit as any)._id || outfit.id}`, { feedback: next ?? null });
+  } catch (e) {
+    console.error('Failed to persist outfit feedback', e);
   }
+}
+
+/**
+ * Pin/unpin an outfit. Pinned outfits are sorted to the top of the list
+ * (see `getOutfits`). Updates locally first, then persists to the backend.
+ */
+export async function toggleOutfitPin(id: string): Promise<boolean> {
+  const outfit = store.find((o) => o.id === id || (o as any)._id === id);
+  if (!outfit) return false;
+  const next = !outfit.pinned;
+  outfit.pinned = next;
+  try {
+    await api.put(`/style/outfits/${(outfit as any)._id || outfit.id}`, { pinned: next });
+  } catch (e) {
+    console.error('Failed to persist outfit pin', e);
+  }
+  return next;
 }
 
 // ─── Derived helpers ─────────────────────────────────────────────

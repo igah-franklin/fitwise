@@ -209,7 +209,7 @@ export default function OnboardingScreen() {
       {/* Header overlay */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={[styles.brand, { color: ONBOARDING_SLIDES[currentStep].accentSolid }]}>
-          ✦ fitwise
+          ✦ WearThis
         </Text>
         <Pressable onPress={handleSkip} hitSlop={10}>
           <Text style={[styles.skip, {

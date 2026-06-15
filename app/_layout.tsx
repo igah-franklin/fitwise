@@ -88,34 +88,38 @@ function AuthGuard({ isOnboarded, themeName, theme }: { isOnboarded: boolean, th
   useEffect(() => {
     if (isLoading) return;
 
-    // Force onboarding for first time users before anything else
-    if (!isOnboarded && segments[0] !== 'onboarding') {
-      router.replace('/onboarding');
+    const current = segments[0];
+
+    // 1. Force onboarding for first-time users
+    if (!isOnboarded) {
+      if (current !== 'onboarding') {
+        router.replace('/onboarding');
+      }
       return;
     }
 
+    // 2. Not signed in → must be on auth screens
     if (!user) {
-      if (segments[0] !== '(auth)' && segments[0] !== 'onboarding') {
+      if (current !== '(auth)') {
         router.replace('/(auth)/login');
       }
-    } else {
-      // User is authenticated — wait until we know whether they have a profile.
-      if (!profileHydrated) return;
+      return;
+    }
 
-      const inAuthGroup = segments[0] === '(auth)';
-      const isSetup = segments[0] === 'setup';
+    // 3. Signed in — wait for profile hydration before deciding
+    if (!profileHydrated) return;
 
-      // Gate everything behind a completed setup form. The collected details are
-      // reused to prefill the form for future generations.
-      if (!profile?.completedAt) {
-        if (!isSetup) {
-          router.replace('/setup');
-        }
-      } else {
-        if (inAuthGroup || segments[0] === 'onboarding' || isSetup) {
-          router.replace('/(tabs)');
-        }
+    // 4. Profile not completed → send to setup
+    if (!profile?.completedAt) {
+      if (current !== 'setup') {
+        router.replace('/setup');
       }
+      return;
+    }
+
+    // 5. Profile complete — kick out of auth/onboarding/root-index only
+    if (current === '(auth)' || current === 'onboarding' || !current) {
+      router.replace('/(tabs)');
     }
   }, [user, isLoading, segments, isOnboarded, profile, profileHydrated]);
 

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Fitwise-mydorey",
-    "slug": "fitwise-mydorey",
+    "name": "WearThis",
+    "slug": "wearthis",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -17,14 +17,14 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.approom.fitwisemydorey"
+      "bundleIdentifier": "com.approom.wearthis"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.approom.fitwisemydorey"
+      "package": "com.approom.wearthis"
     },
     "web": {
       "favicon": "./assets/favicon.png",

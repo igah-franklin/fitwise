@@ -13,13 +13,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Text } from '@/components/ui/Text';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PressScale } from '@/components/ui/Motion';
+import { GeneratingWardrobeScreen } from '@/components/GeneratingScreen';
 import { useTheme } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
 import {
@@ -34,11 +35,10 @@ import {
   type UserProfile,
 } from '@/lib/profile';
 import { buildWardrobe } from '@/lib/wardrobe';
-import { generateOutfit } from '@/lib/outfits';
-import type { BudgetRange, OutfitOccasion, StyleType } from '@/lib/types';
+import type { BudgetRange, StyleType } from '@/lib/types';
 
 const STEPS = [
-  { title: 'Welcome to Fitwise', subtitle: "Before we curate your wardrobe, let's understand you better. Here is why we need a few details:" },
+  { title: 'Welcome to WearThis', subtitle: "Before we curate your wardrobe, let's understand you better. Here is why we need a few details:" },
   { title: 'Your Measurements', subtitle: 'So every recommendation fits you exactly.' },
   { title: 'Your Style', subtitle: 'Pick the looks you want to live in.' },
   { title: 'Your Budget', subtitle: 'We tailor prices and brands to your range.' },
@@ -60,64 +60,9 @@ const MEASUREMENT_FIELDS: {
     { key: 'inseam', label: 'Inseam', unit: 'cm', placeholder: '80' },
   ];
 
-function GeneratingWardrobeScreen({ theme }: { theme: any }) {
-  const styles = makeStyles(theme);
-  const [stepIndex, setStepIndex] = useState(0);
-  const steps = [
-    'Analyzing style profile...',
-    'Curating personalized pieces...',
-    'Generating premium product shots...',
-    'Finalizing your wardrobe...',
-  ];
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setStepIndex((prev) => (prev < steps.length - 1 ? prev + 1 : prev));
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const pulse = useSharedValue(1);
-  useEffect(() => {
-    pulse.value = withRepeat(
-      withTiming(1.2, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true
-    );
-  }, []);
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulse.value }],
-    opacity: 1.5 - pulse.value,
-  }));
-
-  return (
-    <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-      <Animated.View style={[styles.pulseCircle, { backgroundColor: theme.primary }, pulseStyle]} />
-      {/* <View style={[styles.iconContainer, { backgroundColor: theme.card }]}>
-        <Ionicons name="sparkles" size={48} color={theme.primary} />
-      </View> */}
-
-      <Animated.Text entering={FadeIn.duration(500)} style={styles.loadingTitle}>
-        Building your wardrobe
-      </Animated.Text>
-
-      <Animated.Text
-        key={stepIndex}
-        entering={FadeIn.duration(800)}
-        exiting={FadeOut.duration(400)}
-        style={styles.loadingText}
-      >
-        {steps[stepIndex]}
-      </Animated.Text>
-    </SafeAreaView>
-  );
-}
-
 export default function SetupScreen() {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
-  const params = useLocalSearchParams<{ occasion?: string }>();
   const existing = getProfile();
 
   const [step, setStep] = useState(0);
@@ -225,13 +170,9 @@ export default function SetupScreen() {
       };
       await saveProfile(profile);
 
-      const occasion = params.occasion as OutfitOccasion | undefined;
-      if (occasion) {
-        const outfit = await generateOutfit(occasion);
-        router.replace(`/outfit/${outfit.id}`);
-      } else {
-        router.replace('/(tabs)/wardrobe');
-      }
+      // After a successful wardrobe generation, always land the user on the
+      // wardrobe tab so they see the pieces that were just created.
+      router.replace('/(tabs)/wardrobe');
     } catch (error: any) {
       setSubmitting(false);
       Alert.alert('Something went wrong', error.message || 'Please try generating your wardrobe again.');
@@ -239,7 +180,7 @@ export default function SetupScreen() {
   };
 
   if (submitting) {
-    return <GeneratingWardrobeScreen theme={theme} />;
+    return <GeneratingWardrobeScreen />;
   }
 
   return (

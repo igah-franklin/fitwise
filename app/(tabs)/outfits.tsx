@@ -11,7 +11,7 @@ import { AnimatedScreen, SlideUp, Stagger, PressScale } from '@/components/ui/Mo
 import { EmptyState } from '@/components/layout/EmptyState';
 import { useTheme } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
-import { getOutfits, formatTimeAgo, generateOutfit, removeOutfit } from '@/lib/outfits';
+import { getOutfits, formatTimeAgo, generateOutfit, removeOutfit, toggleOutfitPin } from '@/lib/outfits';
 import type { Outfit, OutfitOccasion } from '@/lib/types';
 import { GeneratingOutfitScreen } from '@/components/GeneratingOutfitScreen';
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal';
@@ -72,6 +72,11 @@ export default function OutfitsScreen() {
     }
   };
 
+  const handleTogglePin = async (id: string) => {
+    await toggleOutfitPin(id);
+    setOutfits(getOutfits());
+  };
+
   const renderOutfit = (outfit: Outfit) => (
     <PressScale
       key={outfit.id}
@@ -80,6 +85,17 @@ export default function OutfitsScreen() {
     >
       <View style={styles.outfitPreview}>
         <Image source={{ uri: outfit.previewUrl }} style={styles.previewImage} />
+        <PressScale
+          onPress={() => handleTogglePin(outfit.id)}
+          hitSlop={10}
+          style={[styles.pinButton, outfit.pinned && styles.pinButtonActive]}
+        >
+          <Ionicons
+            name={outfit.pinned ? 'bookmark' : 'bookmark-outline'}
+            size={15}
+            color={outfit.pinned ? theme.onPrimary : '#fff'}
+          />
+        </PressScale>
         <View style={styles.outfitOverlay}>
           <View style={styles.occasionBadge}>
             <Text style={styles.occasionBadgeText}>{outfit.occasion.toUpperCase()}</Text>
@@ -93,7 +109,9 @@ export default function OutfitsScreen() {
             <Ionicons name="trash-outline" size={16} color={theme.danger} />
           </PressScale>
         </View>
-        <Text style={styles.outfitTime}>{formatTimeAgo(outfit.createdAt)}</Text>
+        <Text style={styles.outfitTime}>
+          {outfit.pinned ? 'Pinned · ' : ''}{formatTimeAgo(outfit.createdAt)}
+        </Text>
       </View>
     </PressScale>
   );
@@ -395,6 +413,20 @@ const makeStyles = (theme: any) => StyleSheet.create({
     position: 'absolute',
     top: Layout.spacing.sm,
     right: Layout.spacing.sm,
+  },
+  pinButton: {
+    position: 'absolute',
+    top: Layout.spacing.sm,
+    left: Layout.spacing.sm,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pinButtonActive: {
+    backgroundColor: theme.primary,
   },
   occasionBadge: {
     backgroundColor: 'rgba(0,0,0,0.8)',

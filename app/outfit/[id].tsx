@@ -17,6 +17,7 @@ import {
   formatTimeAgo,
   occasionLabel,
   updateOutfitFeedback,
+  toggleOutfitPin,
   removeOutfit,
 } from '@/lib/outfits';
 import type { ClothingCategory, ItemStatus, OutfitItem } from '@/lib/types';
@@ -42,7 +43,7 @@ export default function OutfitDetailsScreen() {
   const styles = makeStyles(theme);
   const { id } = useLocalSearchParams<{ id: string }>();
   const [outfit, setOutfit] = useState(() => (id ? getOutfitById(id) : undefined));
-  const [saved, setSaved] = useState(false);
+  const [pinned, setPinned] = useState(!!outfit?.pinned);
   const [regenerating, setRegenerating] = useState(false);
   const [feedback, setFeedback] = useState<'like' | 'dislike' | undefined>(outfit?.feedback);
 
@@ -67,8 +68,9 @@ export default function OutfitDetailsScreen() {
   ).length;
   const toBuyCount = outfit.items.length - ownedCount;
 
-  const handleSave = () => {
-    setSaved((prev) => !prev);
+  const handleTogglePin = async () => {
+    const next = await toggleOutfitPin(outfit.id);
+    setPinned(next);
   };
 
   const handleRegenerate = async () => {
@@ -76,7 +78,7 @@ export default function OutfitDetailsScreen() {
     try {
       const next = await generateOutfit(outfit.occasion);
       setRegenerating(false);
-      setSaved(false);
+      setPinned(false);
       setFeedback(undefined);
       setOutfit(next);
       router.setParams({ id: next.id });
@@ -87,8 +89,9 @@ export default function OutfitDetailsScreen() {
   };
 
   const handleFeedback = (type: 'like' | 'dislike') => {
-    updateOutfitFeedback(outfit.id, type);
-    setFeedback(type);
+    // Mirror the store's toggle behavior: tapping the active choice clears it.
+    setFeedback((prev) => (prev === type ? undefined : type));
+    void updateOutfitFeedback(outfit.id, type);
   };
 
   const handleShop = () => {
@@ -147,11 +150,11 @@ export default function OutfitDetailsScreen() {
         </PressScale>
         <Text style={styles.headerTitle}>Outfit Details</Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <PressScale style={styles.headerButton} onPress={handleSave} hitSlop={10}>
+          <PressScale style={styles.headerButton} onPress={handleTogglePin} hitSlop={10}>
             <Ionicons
-              name={saved ? 'heart' : 'heart-outline'}
+              name={pinned ? 'bookmark' : 'bookmark-outline'}
               size={22}
-              color={saved ? theme.danger : theme.text}
+              color={pinned ? theme.primary : theme.text}
             />
           </PressScale>
           <PressScale 
@@ -271,14 +274,14 @@ export default function OutfitDetailsScreen() {
                   style={styles.regenerateButton}
                 />
                 <Button
-                  title={saved ? 'Saved to Collection' : 'Save Outfit'}
-                  variant={saved ? 'secondary' : 'outline'}
-                  onPress={handleSave}
+                  title={pinned ? 'Pinned to Top' : 'Pin Outfit'}
+                  variant={pinned ? 'secondary' : 'outline'}
+                  onPress={handleTogglePin}
                   icon={
                     <Ionicons
-                      name={saved ? 'checkmark' : 'bookmark-outline'}
+                      name={pinned ? 'bookmark' : 'bookmark-outline'}
                       size={18}
-                      color={saved ? theme.text : theme.textMuted}
+                      color={pinned ? theme.text : theme.textMuted}
                     />
                   }
                 />

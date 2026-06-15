@@ -93,6 +93,7 @@ export interface Outfit {
   items: OutfitItem[];
   previewUrl?: string;
   feedback?: 'like' | 'dislike';
+  pinned?: boolean;
   weatherContext?: {
     temp: number;
     condition: string;
