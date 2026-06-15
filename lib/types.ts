@@ -29,7 +29,6 @@ export interface StylePreferences {
   primaryStyle: StyleType;
   secondaryStyles: StyleType[];
   budget: BudgetRange;
-  existingBasics?: string[];
   createdAt: string;
   updatedAt: string;
 }

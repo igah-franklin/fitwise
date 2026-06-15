@@ -63,7 +63,7 @@ export default function ProfileScreen() {
   const photoCount = profile ? [profile.photos?.front, profile.photos?.side].filter(Boolean).length : 0;
   const styleValue = profile && profile.primaryStyle
     ? styleLabel(profile.primaryStyle) +
-      (profile.secondaryStyles?.length ? `, +${profile.secondaryStyles.length} more` : '')
+    (profile.secondaryStyles?.length ? `, +${profile.secondaryStyles.length} more` : '')
     : 'Not set';
 
   const openSetup = () => router.push('/setup');
@@ -90,8 +90,8 @@ export default function ProfileScreen() {
       'Are you sure you want to sign out?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Sign Out', 
+        {
+          text: 'Sign Out',
           style: 'destructive',
           onPress: async () => {
             await signOut();
@@ -111,8 +111,8 @@ export default function ProfileScreen() {
       'Are you sure you want to permanently delete your account and all data? This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
+        {
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
@@ -216,7 +216,7 @@ export default function ProfileScreen() {
                   onPress={toggleTheme}
                   showChevron={false}
                 />
-                <ProfileSection
+                {/* <ProfileSection
                   title="Notifications"
                   icon="notifications-outline"
                   onPress={handleNotifications}
@@ -230,7 +230,7 @@ export default function ProfileScreen() {
                   title="Help & Support"
                   icon="help-circle-outline"
                   onPress={handleHelp}
-                />
+                /> */}
               </View>
             </SlideUp>
 

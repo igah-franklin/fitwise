@@ -61,10 +61,13 @@ export default function VerifyScreen() {
     try {
       setIsLoading(true);
       setError('');
-      const res = await api.post('/auth/verify-email', { email, code: fullCode });
+      await api.post('/auth/verify-email', { email, code: fullCode });
       
-      // Log the user in upon successful verification
-      await signIn(res.data.token, res.data);
+      Alert.alert(
+        'Success',
+        'Your email has been successfully verified. Please log in to continue.',
+        [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
+      );
     } catch (e: any) {
       setError(e.response?.data?.message || 'Verification failed');
     } finally {

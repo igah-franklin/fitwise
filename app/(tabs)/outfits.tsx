@@ -14,6 +14,7 @@ import { Layout } from '@/constants/Layout';
 import { getOutfits, formatTimeAgo, generateOutfit, removeOutfit } from '@/lib/outfits';
 import type { Outfit, OutfitOccasion } from '@/lib/types';
 import { GeneratingOutfitScreen } from '@/components/GeneratingOutfitScreen';
+import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal';
 
 const { width } = Dimensions.get('window');
 // Account for both the Screen's outer padding and the container's inner padding,
@@ -34,10 +35,12 @@ export default function OutfitsScreen() {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
   const [selectedOccasion, setSelectedOccasion] = useState<OutfitOccasion>('casual');
-  const [selectedVibe, setSelectedVibe] = useState('Standard');
   const [modalVisible, setModalVisible] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [outfits, setOutfits] = useState<Outfit[]>(() => getOutfits());
+  const [deleteOutfitId, setDeleteOutfitId] = useState<string | null>(null);
+  
+  const outfitToDelete = outfits.find(o => o.id === deleteOutfitId);
 
   // Refresh the list whenever the screen regains focus (e.g. after coming back
   // from the details screen, which may have generated/regenerated outfits).
@@ -61,9 +64,12 @@ export default function OutfitsScreen() {
     }
   };
 
-  const handleRemoveOutfit = (id: string) => {
-    removeOutfit(id);
-    setOutfits(getOutfits());
+  const confirmRemoveOutfit = () => {
+    if (deleteOutfitId) {
+      removeOutfit(deleteOutfitId);
+      setOutfits(getOutfits());
+      setDeleteOutfitId(null);
+    }
   };
 
   const renderOutfit = (outfit: Outfit) => (
@@ -83,7 +89,7 @@ export default function OutfitsScreen() {
       <View style={styles.outfitInfo}>
         <View style={styles.outfitInfoHeader}>
           <Text style={styles.outfitName}>{outfit.name}</Text>
-          <PressScale onPress={() => handleRemoveOutfit(outfit.id)} hitSlop={10}>
+          <PressScale onPress={() => setDeleteOutfitId(outfit.id)} hitSlop={10}>
             <Ionicons name="trash-outline" size={16} color={theme.danger} />
           </PressScale>
         </View>
@@ -237,7 +243,7 @@ export default function OutfitsScreen() {
                       <Ionicons
                         name={occ.icon as any}
                         size={20}
-                        color={selectedOccasion === occ.key ? theme.primary : theme.textMuted}
+                        color={selectedOccasion === occ.key ? theme.onPrimary : theme.textMuted}
                       />
                     </View>
                     <Text style={[
@@ -245,28 +251,6 @@ export default function OutfitsScreen() {
                       selectedOccasion === occ.key && styles.modalChipTextActive
                     ]}>
                       {occ.label}
-                    </Text>
-                  </PressScale>
-                ))}
-              </View>
-
-              <Text style={styles.modalSectionTitle}>Vibe (Optional)</Text>
-              <View style={styles.modalGrid}>
-                {['Standard', 'Edgy', 'Minimalist', 'Old Money'].map((vibe) => (
-                  <PressScale
-                    key={vibe}
-                    style={[
-                      styles.modalChip,
-                      { paddingVertical: Layout.spacing.sm },
-                      selectedVibe === vibe && styles.modalChipActive
-                    ]}
-                    onPress={() => setSelectedVibe(vibe)}
-                  >
-                    <Text style={[
-                      styles.modalChipText,
-                      selectedVibe === vibe && styles.modalChipTextActive
-                    ]}>
-                      {vibe}
                     </Text>
                   </PressScale>
                 ))}
@@ -285,6 +269,15 @@ export default function OutfitsScreen() {
           </View>
         </BlurView>
       </Modal>
+
+      <ConfirmDeleteModal
+        visible={!!deleteOutfitId}
+        title="Delete Outfit"
+        message="Are you sure you want to delete this outfit? This action cannot be undone."
+        itemName={outfitToDelete?.name}
+        onConfirm={confirmRemoveOutfit}
+        onCancel={() => setDeleteOutfitId(null)}
+      />
     </Screen>
   );
 }
@@ -462,7 +455,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
   modalOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(13, 30, 179, 0.63)',
+    backgroundColor: 'rgba(115, 123, 192, 0.14)',
   },
   modalContent: {
     backgroundColor: theme.card,
@@ -533,8 +526,13 @@ const makeStyles = (theme: any) => StyleSheet.create({
     flex: 1,
   },
   modalChipActive: {
-    backgroundColor: theme.primaryMuted,
+    backgroundColor: theme.primary,
     borderColor: theme.primary,
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
   },
   modalChipIconContainer: {
     width: 36,
@@ -546,7 +544,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
     marginRight: Layout.spacing.sm,
   },
   modalChipIconContainerActive: {
-    backgroundColor: theme.background,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
   },
   modalChipText: {
     fontSize: 16,
@@ -554,7 +552,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
     color: theme.text,
   },
   modalChipTextActive: {
-    color: theme.primary,
+    color: theme.onPrimary,
   },
   modalFooter: {
     padding: Layout.spacing.xl,

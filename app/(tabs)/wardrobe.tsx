@@ -15,6 +15,7 @@ import { Layout } from '@/constants/Layout';
 import { isProfileComplete, getProfile } from '@/lib/profile';
 import { useWardrobe, buildWardrobe, markAsOwned, swapItem, removeWardrobeItem } from '@/lib/wardrobe';
 import type { WardrobeItem, ClothingCategory } from '@/lib/types';
+import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - Layout.spacing.lg * 3) / 2;
@@ -67,6 +68,16 @@ export default function WardrobeScreen() {
   const [selectedCategory, setSelectedCategory] = useState<ClothingCategory | 'all'>('all');
   const [rebuilding, setRebuilding] = useState(false);
   const wardrobeItems = useWardrobe();
+  const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
+
+  const itemToDelete = wardrobeItems?.find(item => ((item as any)._id || item.id) === deleteItemId);
+
+  const confirmRemoveItem = () => {
+    if (deleteItemId) {
+      removeWardrobeItem(deleteItemId);
+      setDeleteItemId(null);
+    }
+  };
 
   const filteredItems = selectedCategory === 'all'
     ? wardrobeItems
@@ -122,7 +133,7 @@ export default function WardrobeScreen() {
             size={18}
             color={getStatusColor(item.status)}
           />
-          <PressScale onPress={() => removeWardrobeItem((item as any)._id || item.id)} hitSlop={10} style={{ marginLeft: 8 }}>
+          <PressScale onPress={() => setDeleteItemId((item as any)._id || item.id)} hitSlop={10} style={{ marginLeft: 8 }}>
             <Ionicons name="trash-outline" size={16} color={theme.danger} />
           </PressScale>
         </View>
@@ -290,6 +301,15 @@ export default function WardrobeScreen() {
           )}
         </View>
       </AnimatedScreen>
+
+      <ConfirmDeleteModal
+        visible={!!deleteItemId}
+        title="Delete Item"
+        message="Are you sure you want to delete this wardrobe item? This action cannot be undone."
+        itemName={itemToDelete?.name}
+        onConfirm={confirmRemoveItem}
+        onCancel={() => setDeleteItemId(null)}
+      />
     </Screen>
   );
 }

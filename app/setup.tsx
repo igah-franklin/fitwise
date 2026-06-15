@@ -38,10 +38,10 @@ import { generateOutfit } from '@/lib/outfits';
 import type { BudgetRange, OutfitOccasion, StyleType } from '@/lib/types';
 
 const STEPS = [
+  { title: 'Welcome to Fitwise', subtitle: "Before we curate your wardrobe, let's understand you better. Here is why we need a few details:" },
   { title: 'Your Measurements', subtitle: 'So every recommendation fits you exactly.' },
   { title: 'Your Style', subtitle: 'Pick the looks you want to live in.' },
   { title: 'Your Budget', subtitle: 'We tailor prices and brands to your range.' },
-  { title: 'Existing Wardrobe', subtitle: 'Check off basics you already own so we don\'t recommend them again.' },
   { title: 'Your Photos', subtitle: 'Optional — preview outfits on your own body.' },
 ];
 
@@ -135,7 +135,6 @@ export default function SetupScreen() {
     existing?.secondaryStyles ?? [],
   );
   const [budget, setBudget] = useState<BudgetRange>(existing?.budget ?? 'mid-range');
-  const [existingBasics, setExistingBasics] = useState<string[]>(existing?.existingBasics ?? []);
   const [photos, setPhotos] = useState<ProfilePhotos>(existing?.photos ?? {});
 
   const isLastStep = step === STEPS.length - 1;
@@ -150,11 +149,7 @@ export default function SetupScreen() {
     setMeasurements((prev) => ({ ...prev, [key]: clean }));
   };
 
-  const toggleBasic = (basic: string) => {
-    setExistingBasics((prev) =>
-      prev.includes(basic) ? prev.filter((b) => b !== basic) : [...prev, basic],
-    );
-  };
+
 
   const toggleSecondary = (style: StyleType) => {
     setSecondaryStyles((prev) =>
@@ -190,7 +185,9 @@ export default function SetupScreen() {
 
   const handleBack = () => {
     if (step === 0) {
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      }
     } else {
       setShowErrors(false);
       setStep((s) => s - 1);
@@ -198,7 +195,7 @@ export default function SetupScreen() {
   };
 
   const handleNext = () => {
-    if (step === 0 && !measurementsValid) {
+    if (step === 1 && !measurementsValid) {
       setShowErrors(true);
       return;
     }
@@ -215,14 +212,13 @@ export default function SetupScreen() {
     try {
       // Build the wardrobe first so the profile is only marked complete once
       // there's actually a wardrobe to shop from and generate outfits with.
-      await buildWardrobe({ primaryStyle, secondaryStyles, budget, existingBasics });
+      await buildWardrobe({ primaryStyle, secondaryStyles, budget });
 
       const profile: UserProfile = {
         measurements,
         primaryStyle,
         secondaryStyles,
         budget,
-        existingBasics,
         photos,
         gender,
         completedAt: new Date().toISOString(),
@@ -250,9 +246,13 @@ export default function SetupScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
-        <PressScale style={styles.headerButton} onPress={handleBack} hitSlop={10}>
-          <Ionicons name={step === 0 ? 'close' : 'chevron-back'} size={24} color={theme.text} />
-        </PressScale>
+        {step > 0 || router.canGoBack() ? (
+          <PressScale style={styles.headerButton} onPress={handleBack} hitSlop={10}>
+            <Ionicons name={step === 0 ? 'close' : 'chevron-back'} size={24} color={theme.text} />
+          </PressScale>
+        ) : (
+          <View style={styles.headerButton} />
+        )}
         <Text style={styles.stepCount}>
           Step {step + 1} of {STEPS.length}
         </Text>
@@ -283,11 +283,64 @@ export default function SetupScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.title}>{STEPS[step].title}</Text>
-          <Text style={styles.subtitle}>{STEPS[step].subtitle}</Text>
+          {step !== 0 && <Text style={styles.title}>{STEPS[step].title}</Text>}
+          {step !== 0 && <Text style={styles.subtitle}>{STEPS[step].subtitle}</Text>}
 
-          {/* Step 0 — Measurements */}
+          {/* Step 0 — Introduction */}
           {step === 0 && (
+            <Animated.View entering={FadeIn.duration(400)} style={styles.introContainer}>
+              <View style={styles.introIconContainer}>
+                <Ionicons name="sparkles" size={48} color={theme.primary} />
+              </View>
+              <Text style={styles.introHeadline}>{STEPS[step].title}</Text>
+              <Text style={styles.introBody}>{STEPS[step].subtitle}</Text>
+              
+              <View style={styles.introFeatureList}>
+                <View style={styles.introFeatureItem}>
+                  <View style={styles.introFeatureIconWrapper}>
+                    <Ionicons name="body-outline" size={24} color={theme.primary} />
+                  </View>
+                  <View style={styles.introFeatureTextWrapper}>
+                    <Text style={styles.introFeatureTitle}>Measurements</Text>
+                    <Text style={styles.introFeatureDesc}>For clothes that fit your unique body shape perfectly</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.introFeatureItem}>
+                  <View style={styles.introFeatureIconWrapper}>
+                    <Ionicons name="shirt-outline" size={24} color={theme.primary} />
+                  </View>
+                  <View style={styles.introFeatureTextWrapper}>
+                    <Text style={styles.introFeatureTitle}>Style & Vibe</Text>
+                    <Text style={styles.introFeatureDesc}>To match your personal aesthetic and lifestyle</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.introFeatureItem}>
+                  <View style={styles.introFeatureIconWrapper}>
+                    <Ionicons name="wallet-outline" size={24} color={theme.primary} />
+                  </View>
+                  <View style={styles.introFeatureTextWrapper}>
+                    <Text style={styles.introFeatureTitle}>Budget Range</Text>
+                    <Text style={styles.introFeatureDesc}>To recommend pieces that make sense for your wallet</Text>
+                  </View>
+                </View>
+
+                <View style={styles.introFeatureItem}>
+                  <View style={styles.introFeatureIconWrapper}>
+                    <Ionicons name="camera-outline" size={24} color={theme.primary} />
+                  </View>
+                  <View style={styles.introFeatureTextWrapper}>
+                    <Text style={styles.introFeatureTitle}>Photos (Optional)</Text>
+                    <Text style={styles.introFeatureDesc}>To visualize outfits on your own body</Text>
+                  </View>
+                </View>
+              </View>
+            </Animated.View>
+          )}
+
+          {/* Step 1 — Measurements */}
+          {step === 1 && (
             <View>
               <Text style={styles.groupLabel}>Gender</Text>
               <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
@@ -335,8 +388,8 @@ export default function SetupScreen() {
             </View>
           )}
 
-          {/* Step 1 — Style */}
-          {step === 1 && (
+          {/* Step 2 — Style */}
+          {step === 2 && (
             <View>
               <Text style={styles.groupLabel}>Primary style</Text>
               <View style={styles.styleGrid}>
@@ -393,8 +446,8 @@ export default function SetupScreen() {
             </View>
           )}
 
-          {/* Step 2 — Budget */}
-          {step === 2 && (
+          {/* Step 3 — Budget */}
+          {step === 3 && (
             <View style={styles.budgetList}>
               {BUDGET_OPTIONS.map((opt) => {
                 const active = budget === opt.key;
@@ -437,38 +490,7 @@ export default function SetupScreen() {
             </View>
           )}
 
-          {/* Step 3 — Existing Wardrobe */}
-          {step === 3 && (
-            <View>
-              <Text style={styles.groupLabel}>Select what you already own</Text>
-              <View style={styles.styleGrid}>
-                {COMMON_BASICS.map((opt) => {
-                  const active = existingBasics.includes(opt.key);
-                  return (
-                    <PressScale
-                      key={opt.key}
-                      style={[styles.styleChipOutline, active && styles.styleChipOutlineActive]}
-                      onPress={() => toggleBasic(opt.key)}
-                    >
-                      <Ionicons
-                        name={active ? 'checkmark-circle' : 'ellipse-outline'}
-                        size={18}
-                        color={active ? theme.primary : theme.textMuted}
-                      />
-                      <Text
-                        style={[
-                          styles.styleChipOutlineText,
-                          active && styles.styleChipOutlineTextActive,
-                        ]}
-                      >
-                        {opt.label}
-                      </Text>
-                    </PressScale>
-                  );
-                })}
-              </View>
-            </View>
-          )}
+
 
           {/* Step 4 — Photos */}
           {step === 4 && (
@@ -500,7 +522,7 @@ export default function SetupScreen() {
             </View>
           )}
 
-          {step === 4 && (
+          {step === 3 && (
             <View style={styles.photoNote}>
               <Ionicons name="lock-closed-outline" size={14} color={theme.textMuted} />
               <Text style={styles.photoNoteText}>
@@ -728,6 +750,76 @@ const makeStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 4,
+  },
+  photoSlotText: {
+    marginTop: Layout.spacing.sm,
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.textMuted,
+    textTransform: 'capitalize',
+  },
+  introContainer: {
+    paddingTop: Layout.spacing.sm,
+    alignItems: 'center',
+  },
+  introIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: theme.primaryMuted,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Layout.spacing.lg,
+  },
+  introHeadline: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: theme.text,
+    textAlign: 'center',
+    marginBottom: Layout.spacing.xs,
+  },
+  introBody: {
+    fontSize: 15,
+    color: theme.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: Layout.spacing.xl,
+  },
+  introFeatureList: {
+    width: '100%',
+    gap: Layout.spacing.md,
+  },
+  introFeatureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.surface,
+    padding: Layout.spacing.md,
+    borderRadius: Layout.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  introFeatureIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: theme.primaryMuted,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Layout.spacing.md,
+  },
+  introFeatureTextWrapper: {
+    flex: 1,
+  },
+  introFeatureTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.text,
+    marginBottom: 2,
+  },
+  introFeatureDesc: {
+    fontSize: 14,
+    color: theme.textSecondary,
+    lineHeight: 20,
   },
   photoSlotLabel: {
     fontSize: 14,
