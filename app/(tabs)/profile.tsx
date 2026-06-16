@@ -14,6 +14,7 @@ import { useProfile, measurementsSummary, styleLabel, clearProfile } from '@/lib
 import { useWardrobe, clearWardrobe } from '@/lib/wardrobe';
 import { getOutfits, clearOutfits } from '@/lib/outfits';
 import { useAuth } from '@/lib/AuthContext';
+import { useSubscription } from '@/lib/subscription';
 import api from '@/lib/api';
 
 interface ProfileSectionProps {
@@ -53,6 +54,7 @@ export default function ProfileScreen() {
   const profile = useProfile();
   const wardrobe = useWardrobe();
   const { user, signOut } = useAuth();
+  const { subscriptionTier } = useSubscription();
 
   const userStats = {
     wardrobeItems: wardrobe.length,
@@ -204,6 +206,41 @@ export default function ProfileScreen() {
                 />
               </View>
             </SlideUp>
+
+          {/* Subscription Section */}
+          <SlideUp>
+            <Text style={styles.sectionHeader}>Subscription</Text>
+            <Card padding="md" style={[styles.subscriptionCard, { borderColor: subscriptionTier !== 'free' ? theme.primary : theme.border }]}>
+              <View style={styles.subscriptionHeader}>
+                <View style={[styles.subscriptionIconContainer, { backgroundColor: subscriptionTier !== 'free' ? theme.primaryMuted : theme.divider }]}>
+                  <Ionicons
+                    name="sparkles"
+                    size={20}
+                    color={subscriptionTier !== 'free' ? theme.primary : theme.textMuted}
+                  />
+                </View>
+                <View style={styles.subscriptionDetails}>
+                  <Text style={{ fontSize: 16, fontFamily: 'Inter-Bold', color: theme.text }}>
+                    {subscriptionTier === 'free' ? 'Free Tier' : subscriptionTier === 'pro' ? 'WearThis Pro' : 'WearThis Elite'}
+                  </Text>
+                  <Text style={{ fontSize: 13, fontFamily: 'Inter', color: theme.textSecondary, marginTop: 4, lineHeight: 18 }}>
+                    {subscriptionTier === 'free'
+                      ? 'Limited to 20 wardrobe items and 3 outfits/mo'
+                      : subscriptionTier === 'pro'
+                      ? 'Limited to 150 wardrobe items and 100 outfits/mo'
+                      : 'Unlimited wardrobe items and outfits'}
+                  </Text>
+                </View>
+              </View>
+              <Button
+                title={subscriptionTier === 'premium' ? 'Manage Subscription' : 'Upgrade Plan'}
+                variant={subscriptionTier === 'free' ? 'primary' : 'outline'}
+                onPress={() => router.push('/paywall')}
+                style={{ marginTop: 14 }}
+                size="sm"
+              />
+            </Card>
+          </SlideUp>
 
             {/* App Settings */}
             <SlideUp>
@@ -389,5 +426,24 @@ const makeStyles = (theme: any) => StyleSheet.create({
   deleteAccountButton: {
     marginTop: Layout.spacing.sm,
     marginBottom: Layout.spacing.xxl,
+  },
+  subscriptionCard: {
+    marginBottom: Layout.spacing.lg,
+    borderWidth: 2,
+  },
+  subscriptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Layout.spacing.md,
+  },
+  subscriptionIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: Layout.borderRadius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  subscriptionDetails: {
+    flex: 1,
   },
 });

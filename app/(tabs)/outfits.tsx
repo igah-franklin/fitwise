@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, StyleSheet, ScrollView, Image, Dimensions, Modal } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, Dimensions, Modal, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { BlurView } from 'expo-blur';
@@ -15,6 +15,7 @@ import { getOutfits, formatTimeAgo, generateOutfit, removeOutfit, toggleOutfitPi
 import type { Outfit, OutfitOccasion } from '@/lib/types';
 import { GeneratingOutfitScreen } from '@/components/GeneratingOutfitScreen';
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal';
+import { UsageIndicator } from '@/components/UsageIndicator';
 
 const { width } = Dimensions.get('window');
 // Account for both the Screen's outer padding and the container's inner padding,
@@ -34,9 +35,6 @@ const occasions: { key: OutfitOccasion; label: string; icon: string }[] = [
 export default function OutfitsScreen() {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
-  const [selectedOccasion, setSelectedOccasion] = useState<OutfitOccasion>('casual');
-  const [modalVisible, setModalVisible] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [outfits, setOutfits] = useState<Outfit[]>(() => getOutfits());
   const [deleteOutfitId, setDeleteOutfitId] = useState<string | null>(null);
   
@@ -49,20 +47,6 @@ export default function OutfitsScreen() {
       setOutfits(getOutfits());
     }, []),
   );
-
-  const handleConfirmGenerate = async () => {
-    setModalVisible(false);
-    setIsGenerating(true);
-    try {
-      const newOutfit = await generateOutfit(selectedOccasion);
-      setOutfits(getOutfits());
-      setIsGenerating(false);
-      router.push(`/outfit/${newOutfit.id}`);
-    } catch (e: any) {
-      setIsGenerating(false);
-      alert(`Generation Error: ${e.message}`);
-    }
-  };
 
   const confirmRemoveOutfit = () => {
     if (deleteOutfitId) {
@@ -116,9 +100,7 @@ export default function OutfitsScreen() {
     </PressScale>
   );
 
-  if (isGenerating) {
-    return <GeneratingOutfitScreen />;
-  }
+
 
   return (
     <Screen>
@@ -134,6 +116,10 @@ export default function OutfitsScreen() {
 
           <ScrollView showsVerticalScrollIndicator={false}>
             <Stagger step={70} initialDelay={120}>
+              <SlideUp>
+                <UsageIndicator type="outfit" />
+              </SlideUp>
+
               {/* Generator Card */}
               <SlideUp>
                 <Card padding="lg" style={styles.generatorCard}>
@@ -154,7 +140,7 @@ export default function OutfitsScreen() {
                 <Button
                   title="Create New Outfit"
                   variant="primary"
-                  onPress={() => setModalVisible(true)}
+                  onPress={() => router.push('/outfit/create')}
                   icon={<Ionicons name="color-wand-outline" size={18} color={theme.onPrimary} />}
                   style={styles.generateButton}
                 />
@@ -176,7 +162,7 @@ export default function OutfitsScreen() {
                     title="No outfits yet"
                     message="Generate your first AI-powered outfit to get started"
                     actionTitle="Create Outfit"
-                    onAction={() => setModalVisible(true)}
+                    onAction={() => router.push('/outfit/create')}
                   />
                 )}
               </SlideUp>
@@ -222,71 +208,6 @@ export default function OutfitsScreen() {
           </ScrollView>
         </View>
       </AnimatedScreen>
-
-      {/* Generation Modal */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <BlurView intensity={40} tint="dark" style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            {/* Drag Handle Indicator */}
-            <View style={styles.modalDragHandle} />
-
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Design Your Look</Text>
-              <PressScale onPress={() => setModalVisible(false)} style={styles.closeButton}>
-                <Ionicons name="close" size={20} color={theme.text} />
-              </PressScale>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
-              <Text style={styles.modalSectionTitle}>What's the occasion?</Text>
-              <View style={styles.modalGrid}>
-                {occasions.map((occ) => (
-                  <PressScale
-                    key={occ.key}
-                    style={[
-                      styles.modalChip,
-                      selectedOccasion === occ.key && styles.modalChipActive
-                    ]}
-                    onPress={() => setSelectedOccasion(occ.key)}
-                  >
-                    <View style={[
-                      styles.modalChipIconContainer,
-                      selectedOccasion === occ.key && styles.modalChipIconContainerActive
-                    ]}>
-                      <Ionicons
-                        name={occ.icon as any}
-                        size={20}
-                        color={selectedOccasion === occ.key ? theme.onPrimary : theme.textMuted}
-                      />
-                    </View>
-                    <Text style={[
-                      styles.modalChipText,
-                      selectedOccasion === occ.key && styles.modalChipTextActive
-                    ]}>
-                      {occ.label}
-                    </Text>
-                  </PressScale>
-                ))}
-              </View>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <Button
-                title="Generate Outfit"
-                variant="primary"
-                onPress={handleConfirmGenerate}
-                icon={<Ionicons name="sparkles" size={18} color={theme.onPrimary} />}
-                style={styles.generateActionButton}
-              />
-            </View>
-          </View>
-        </BlurView>
-      </Modal>
 
       <ConfirmDeleteModal
         visible={!!deleteOutfitId}

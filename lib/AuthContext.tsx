@@ -32,7 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const token = await SecureStore.getItemAsync('token');
         if (token) {
-          const res = await api.get('/auth/me');
+          const res = await api.get('/auth/me', { timeout: 5000 });
           setUser(res.data);
         }
       } catch (error) {

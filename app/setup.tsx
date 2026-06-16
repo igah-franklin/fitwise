@@ -35,6 +35,7 @@ import {
   type UserProfile,
 } from '@/lib/profile';
 import { buildWardrobe } from '@/lib/wardrobe';
+import { useSubscription } from '@/lib/subscription';
 import type { BudgetRange, StyleType } from '@/lib/types';
 
 const STEPS = [
@@ -42,7 +43,6 @@ const STEPS = [
   { title: 'Your Measurements', subtitle: 'So every recommendation fits you exactly.' },
   { title: 'Your Style', subtitle: 'Pick the looks you want to live in.' },
   { title: 'Your Budget', subtitle: 'We tailor prices and brands to your range.' },
-  { title: 'Your Photos', subtitle: 'Optional — preview outfits on your own body.' },
 ];
 
 const MEASUREMENT_FIELDS: {
@@ -64,6 +64,7 @@ export default function SetupScreen() {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
   const existing = getProfile();
+  const { subscriptionTier } = useSubscription();
 
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -175,7 +176,24 @@ export default function SetupScreen() {
       router.replace('/(tabs)/wardrobe');
     } catch (error: any) {
       setSubmitting(false);
-      Alert.alert('Something went wrong', error.message || 'Please try generating your wardrobe again.');
+      const errMsg = (error.message || '').toLowerCase();
+      if (errMsg.includes('limit') || errMsg.includes('exceeded') || errMsg.includes('403')) {
+        Alert.alert(
+          'Limit Reached',
+          'You have reached your limit of wardrobe item generations for this month. Upgrade to Pro or Premium to generate your wardrobe!',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Upgrade Now', onPress: () => router.push('/paywall') }
+          ]
+        );
+      } else if (errMsg.match(/quota|429|503|demand|unavailable|busy|temporary/)) {
+        Alert.alert(
+          'High Traffic',
+          "We're experiencing high traffic with our provider. Please try again in a few moments."
+        );
+      } else {
+        Alert.alert('Something went wrong', error.message || 'Please try generating your wardrobe again.');
+      }
     }
   };
 
@@ -433,54 +451,11 @@ export default function SetupScreen() {
 
 
 
-          {/* Step 4 — Photos */}
-          {step === 4 && (
-            <View style={styles.photoRow}>
-              {(['front', 'side'] as const).map((slot) => {
-                const uri = photos[slot];
-                return (
-                  <PressScale key={slot} style={styles.photoSlot} onPress={() => pickPhoto(slot)}>
-                    {uri ? (
-                      <>
-                        <Image source={{ uri }} style={styles.photoImage} />
-                        <View style={styles.photoChange}>
-                          <Ionicons name="refresh" size={14} color="#fff" />
-                          <Text style={styles.photoChangeText}>Change</Text>
-                        </View>
-                      </>
-                    ) : (
-                      <View style={styles.photoEmpty}>
-                        <Ionicons name="camera-outline" size={28} color={theme.primary} />
-                        <Text style={styles.photoSlotLabel}>
-                          {slot === 'front' ? 'Front photo' : 'Side photo'}
-                        </Text>
-                        <Text style={styles.photoSlotHint}>Tap to add</Text>
-                      </View>
-                    )}
-                  </PressScale>
-                );
-              })}
-            </View>
-          )}
-
-          {step === 3 && (
-            <View style={styles.photoNote}>
-              <Ionicons name="lock-closed-outline" size={14} color={theme.textMuted} />
-              <Text style={styles.photoNoteText}>
-                Photos stay on your device and are only used to preview how outfits look on you.
-              </Text>
-            </View>
-          )}
         </ScrollView>
       </KeyboardAvoidingView>
 
       {/* Footer */}
       <View style={styles.footer}>
-        {isLastStep && (
-          <Pressable onPress={() => void handleSubmit()} hitSlop={8} style={styles.skipPhotos}>
-            <Text style={styles.skipPhotosText}>Skip for now</Text>
-          </Pressable>
-        )}
         <Button
           title={isLastStep ? 'Generate My Wardrobe' : 'Continue'}
           variant="primary"

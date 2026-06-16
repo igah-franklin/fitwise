@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, FlatList, Dimensions, Image as RNImage } from 'react-native';
+import { View, StyleSheet, FlatList, Dimensions, Image as RNImage, Alert } from 'react-native';
 import Animated, { FadeIn, FadeOut, withRepeat, withTiming, useSharedValue, useAnimatedStyle, Easing } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,11 +12,12 @@ import { AnimatedScreen, SlideUp, Stagger, PressScale } from '@/components/ui/Mo
 import { EmptyState } from '@/components/layout/EmptyState';
 import { useTheme } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
-import { isProfileComplete, getProfile } from '@/lib/profile';
-import { useWardrobe, buildWardrobe, markAsOwned, swapItem, removeWardrobeItem } from '@/lib/wardrobe';
+import { useWardrobe, markAsOwned, swapItem, removeWardrobeItem } from '@/lib/wardrobe';
 import type { WardrobeItem, ClothingCategory } from '@/lib/types';
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal';
 import { GeneratingWardrobeScreen } from '@/components/GeneratingScreen';
+import { UsageIndicator } from '@/components/UsageIndicator';
+import { useSubscription } from '@/lib/subscription';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - Layout.spacing.lg * 3) / 2;
@@ -66,6 +67,7 @@ function SkeletonImage({ uri, style, theme }: { uri: string, style: any, theme: 
 export default function WardrobeScreen() {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
+  const { subscriptionTier } = useSubscription();
   const [selectedCategory, setSelectedCategory] = useState<ClothingCategory | 'all'>('all');
   const [rebuilding, setRebuilding] = useState(false);
   const wardrobeItems = useWardrobe();
@@ -84,21 +86,32 @@ export default function WardrobeScreen() {
     ? wardrobeItems
     : wardrobeItems?.filter(item => item.category === selectedCategory);
 
-  const handleGenerateWardrobe = async () => {
-    const profile = getProfile();
-    if (!isProfileComplete() || !profile) {
-      router.push('/setup');
-      return;
-    }
-    setRebuilding(true);
+  const handleGenerateWardrobe = () => {
+    router.push('/setup');
+  };
+
+  const handleSwapItem = async (id: string) => {
     try {
-      await buildWardrobe({
-        primaryStyle: profile.primaryStyle,
-        secondaryStyles: profile.secondaryStyles,
-        budget: profile.budget,
-      });
-    } finally {
-      setRebuilding(false);
+      await swapItem(id);
+    } catch (error: any) {
+      const errMsg = (error.message || '').toLowerCase();
+      if (errMsg.includes('limit') || errMsg.includes('exceeded') || errMsg.includes('403')) {
+        Alert.alert(
+          'Limit Reached',
+          'You have reached your limit of wardrobe item generations for this month. Upgrade to Pro or Premium to generate more items!',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Upgrade Now', onPress: () => router.push('/paywall') }
+          ]
+        );
+      } else if (errMsg.match(/quota|429|503|demand|unavailable|busy|temporary/)) {
+        Alert.alert(
+          'High Traffic',
+          "We're experiencing high traffic with our provider. Please try again in a few moments."
+        );
+      } else {
+        Alert.alert('Error', error.message || 'Failed to swap item.');
+      }
     }
   };
 
@@ -158,7 +171,7 @@ export default function WardrobeScreen() {
             <Text style={styles.actionButtonText}>Own it</Text>
           </PressScale>
         )}
-        <PressScale onPress={() => swapItem((item as any)._id || item.id)} style={styles.actionButtonSecondary}>
+        <PressScale onPress={() => handleSwapItem((item as any)._id || item.id)} style={styles.actionButtonSecondary}>
           <Text style={styles.actionButtonTextSecondary}>Swap</Text>
         </PressScale>
       </View>
@@ -213,6 +226,10 @@ export default function WardrobeScreen() {
             />
           ) : (
             <Stagger step={60} initialDelay={100}>
+              <SlideUp>
+                <UsageIndicator type="wardrobe" />
+              </SlideUp>
+
               <SlideUp>
                 <View style={styles.filtersContainer}>
                   <PressScale

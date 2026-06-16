@@ -156,11 +156,23 @@ interface StaggerProps {
 }
 
 export function Stagger({ children, step = 60, initialDelay = 0 }: StaggerProps) {
-  const childrenArray = React.Children.toArray(children);
+  const flattenChildren = (node: React.ReactNode): React.ReactNode[] => {
+    const result: React.ReactNode[] = [];
+    React.Children.forEach(node, (child) => {
+      if (React.isValidElement(child) && child.type === React.Fragment) {
+        result.push(...flattenChildren((child.props as any).children));
+      } else if (child !== null && child !== undefined) {
+        result.push(child);
+      }
+    });
+    return result;
+  };
+
+  const childrenArray = flattenChildren(children);
 
   return (
     <>
-      {childrenArray?.map((child, index) => {
+      {childrenArray.map((child, index) => {
         if (React.isValidElement(child)) {
           return React.cloneElement(child, {
             key: child.key || index,
