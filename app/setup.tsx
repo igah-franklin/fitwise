@@ -35,6 +35,7 @@ import {
   type UserProfile,
 } from '@/lib/profile';
 import { buildWardrobe } from '@/lib/wardrobe';
+import { useSubscription } from '@/lib/subscription';
 import type { BudgetRange, StyleType } from '@/lib/types';
 
 const STEPS = [
@@ -63,6 +64,7 @@ export default function SetupScreen() {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
   const existing = getProfile();
+  const { subscriptionTier } = useSubscription();
 
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -174,7 +176,24 @@ export default function SetupScreen() {
       router.replace('/(tabs)/wardrobe');
     } catch (error: any) {
       setSubmitting(false);
-      Alert.alert('Something went wrong', error.message || 'Please try generating your wardrobe again.');
+      const errMsg = (error.message || '').toLowerCase();
+      if (errMsg.includes('limit') || errMsg.includes('exceeded') || errMsg.includes('403')) {
+        Alert.alert(
+          'Limit Reached',
+          'You have reached your limit of wardrobe item generations for this month. Upgrade to Pro or Premium to generate your wardrobe!',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Upgrade Now', onPress: () => router.push('/paywall') }
+          ]
+        );
+      } else if (errMsg.match(/quota|429|503|demand|unavailable|busy|temporary/)) {
+        Alert.alert(
+          'High Traffic',
+          "We're experiencing high traffic with our provider. Please try again in a few moments."
+        );
+      } else {
+        Alert.alert('Something went wrong', error.message || 'Please try generating your wardrobe again.');
+      }
     }
   };
 

@@ -138,8 +138,10 @@ export default function CreateOutfitScreen() {
     } catch (error: any) {
       setIsGenerating(false);
       
-      // Detailed error warning (e.g. Gemini face detection failure)
-      if (error.message?.includes('Face verification failed') || error.message?.includes('400')) {
+      const errMsg = (error.message || '').toLowerCase();
+      
+      // Face detection failure
+      if (errMsg.includes('face verification failed') || errMsg.includes('400')) {
         Alert.alert(
           'Face Verification Failed',
           error.message || 'We could not detect a human face in the photo. Please upload a clear selfie or portrait shot, or skip the photo step.',
@@ -158,20 +160,42 @@ export default function CreateOutfitScreen() {
                   router.replace(`/outfit/${newOutfit.id}`);
                 } catch (err: any) {
                   setIsGenerating(false);
-                  Alert.alert('Error', err.message || 'Failed to generate outfit.');
+                  const innerMsg = (err.message || '').toLowerCase();
+                  if (innerMsg.includes('limit') || innerMsg.includes('exceeded') || innerMsg.includes('403')) {
+                    Alert.alert(
+                      'Limit Reached',
+                      'You have reached your limit of outfit generations for this month. Upgrade to Pro or Premium to generate more outfits!',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Upgrade Now', onPress: () => router.push('/paywall') }
+                      ]
+                    );
+                  } else if (innerMsg.match(/quota|429|503|demand|unavailable|busy|temporary/)) {
+                    Alert.alert(
+                      'High Traffic',
+                      "We're experiencing high traffic with our provider. Please try again in a few moments."
+                    );
+                  } else {
+                    Alert.alert('Error', err.message || 'Failed to generate outfit.');
+                  }
                 }
               }
             }
           ]
         );
-      } else if (error.message?.includes('limit') || error.message?.includes('generations') || error.message?.includes('403')) {
+      } else if (errMsg.includes('limit') || errMsg.includes('exceeded') || errMsg.includes('403')) {
         Alert.alert(
           'Limit Reached',
-          'You have reached your limit of outfit generations for this month. Upgrade to Pro or Elite to generate more outfits!',
+          'You have reached your limit of outfit generations for this month. Upgrade to Pro or Premium to generate more outfits!',
           [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Upgrade Now', onPress: () => router.push('/paywall') }
           ]
+        );
+      } else if (errMsg.match(/quota|429|503|demand|unavailable|busy|temporary/)) {
+        Alert.alert(
+          'High Traffic',
+          "We're experiencing high traffic with our provider. Please try again in a few moments."
         );
       } else {
         Alert.alert('Generation Error', error.message || 'Failed to generate outfit. Please try again.');

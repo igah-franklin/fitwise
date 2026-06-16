@@ -12,12 +12,12 @@ import { AnimatedScreen, SlideUp, Stagger, PressScale } from '@/components/ui/Mo
 import { EmptyState } from '@/components/layout/EmptyState';
 import { useTheme } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
-import { isProfileComplete, getProfile } from '@/lib/profile';
-import { useWardrobe, buildWardrobe, markAsOwned, swapItem, removeWardrobeItem } from '@/lib/wardrobe';
+import { useWardrobe, markAsOwned, swapItem, removeWardrobeItem } from '@/lib/wardrobe';
 import type { WardrobeItem, ClothingCategory } from '@/lib/types';
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal';
 import { GeneratingWardrobeScreen } from '@/components/GeneratingScreen';
 import { UsageIndicator } from '@/components/UsageIndicator';
+import { useSubscription } from '@/lib/subscription';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - Layout.spacing.lg * 3) / 2;
@@ -67,6 +67,7 @@ function SkeletonImage({ uri, style, theme }: { uri: string, style: any, theme: 
 export default function WardrobeScreen() {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
+  const { subscriptionTier } = useSubscription();
   const [selectedCategory, setSelectedCategory] = useState<ClothingCategory | 'all'>('all');
   const [rebuilding, setRebuilding] = useState(false);
   const wardrobeItems = useWardrobe();
@@ -93,14 +94,20 @@ export default function WardrobeScreen() {
     try {
       await swapItem(id);
     } catch (error: any) {
-      if (error.message?.includes('limit') || error.message?.includes('generations') || error.message?.includes('403')) {
+      const errMsg = (error.message || '').toLowerCase();
+      if (errMsg.includes('limit') || errMsg.includes('exceeded') || errMsg.includes('403')) {
         Alert.alert(
           'Limit Reached',
-          'You have reached your limit of wardrobe item generations for this month. Upgrade to Pro or Elite to generate more items!',
+          'You have reached your limit of wardrobe item generations for this month. Upgrade to Pro or Premium to generate more items!',
           [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Upgrade Now', onPress: () => router.push('/paywall') }
           ]
+        );
+      } else if (errMsg.match(/quota|429|503|demand|unavailable|busy|temporary/)) {
+        Alert.alert(
+          'High Traffic',
+          "We're experiencing high traffic with our provider. Please try again in a few moments."
         );
       } else {
         Alert.alert('Error', error.message || 'Failed to swap item.');
