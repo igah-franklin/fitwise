@@ -16,6 +16,7 @@ import type { Outfit, OutfitOccasion } from '@/lib/types';
 import { GeneratingOutfitScreen } from '@/components/GeneratingOutfitScreen';
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal';
 import { UsageIndicator } from '@/components/UsageIndicator';
+import { useSubscription } from '@/lib/subscription';
 
 const { width } = Dimensions.get('window');
 // Account for both the Screen's outer padding and the container's inner padding,
@@ -35,6 +36,7 @@ const occasions: { key: OutfitOccasion; label: string; icon: string }[] = [
 export default function OutfitsScreen() {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
+  const { subscriptionTier } = useSubscription();
   const [outfits, setOutfits] = useState<Outfit[]>(() => getOutfits());
   const [deleteOutfitId, setDeleteOutfitId] = useState<string | null>(null);
   
@@ -89,7 +91,16 @@ export default function OutfitsScreen() {
       <View style={styles.outfitInfo}>
         <View style={styles.outfitInfoHeader}>
           <Text style={styles.outfitName}>{outfit.name}</Text>
-          <PressScale onPress={() => setDeleteOutfitId(outfit.id)} hitSlop={10}>
+          <PressScale
+            onPress={() => {
+              if (subscriptionTier === 'free') {
+                router.push('/paywall');
+              } else {
+                setDeleteOutfitId(outfit.id);
+              }
+            }}
+            hitSlop={10}
+          >
             <Ionicons name="trash-outline" size={16} color={theme.danger} />
           </PressScale>
         </View>

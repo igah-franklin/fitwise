@@ -269,7 +269,7 @@ export default function SetupScreen() {
               </View>
               <Text style={styles.introHeadline}>{STEPS[step].title}</Text>
               <Text style={styles.introBody}>{STEPS[step].subtitle}</Text>
-              
+
               <View style={styles.introFeatureList}>
                 <View style={styles.introFeatureItem}>
                   <View style={styles.introFeatureIconWrapper}>
@@ -280,7 +280,7 @@ export default function SetupScreen() {
                     <Text style={styles.introFeatureDesc}>For clothes that fit your unique body shape perfectly</Text>
                   </View>
                 </View>
-                
+
                 <View style={styles.introFeatureItem}>
                   <View style={styles.introFeatureIconWrapper}>
                     <Ionicons name="shirt-outline" size={24} color={theme.primary} />
@@ -290,7 +290,7 @@ export default function SetupScreen() {
                     <Text style={styles.introFeatureDesc}>To match your personal aesthetic and lifestyle</Text>
                   </View>
                 </View>
-                
+
                 <View style={styles.introFeatureItem}>
                   <View style={styles.introFeatureIconWrapper}>
                     <Ionicons name="wallet-outline" size={24} color={theme.primary} />

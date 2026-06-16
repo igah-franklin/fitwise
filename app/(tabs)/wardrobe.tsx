@@ -147,7 +147,17 @@ export default function WardrobeScreen() {
             size={18}
             color={getStatusColor(item.status)}
           />
-          <PressScale onPress={() => setDeleteItemId((item as any)._id || item.id)} hitSlop={10} style={{ marginLeft: 8 }}>
+          <PressScale
+            onPress={() => {
+              if (subscriptionTier === 'free') {
+                router.push('/paywall');
+              } else {
+                setDeleteItemId((item as any)._id || item.id);
+              }
+            }}
+            hitSlop={10}
+            style={{ marginLeft: 8 }}
+          >
             <Ionicons name="trash-outline" size={16} color={theme.danger} />
           </PressScale>
         </View>
