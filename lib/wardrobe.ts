@@ -14,6 +14,7 @@ import type {
   WardrobeItem,
 } from './types';
 import { getProfile } from './profile';
+import { trackEvent } from './posthog';
 
 const STORAGE_KEY = 'user_wardrobe';
 
@@ -72,6 +73,11 @@ export async function buildWardrobe(opts: {
   budget: BudgetRange;
 }): Promise<WardrobeItem[]> {
   try {
+    trackEvent('wardrobe_generation_requested', {
+      primaryStyle: opts.primaryStyle,
+      secondaryStylesCount: opts.secondaryStyles.length,
+      budget: opts.budget,
+    });
     const res = await api.post('/style/wardrobe/generate', {
       primaryStyle: opts.primaryStyle,
       secondaryStyles: opts.secondaryStyles,
@@ -80,10 +86,15 @@ export async function buildWardrobe(opts: {
     wardrobe = res.data;
     hydrated = true;
     emit();
+    trackEvent('wardrobe_generation_succeeded', {
+      itemCount: wardrobe.length,
+      primaryStyle: opts.primaryStyle,
+    });
     return wardrobe;
   } catch (error: any) {
     console.error('Failed to build wardrobe via AI', error.response?.data || error);
     const backendMessage = error.response?.data?.message || error.message || 'Failed to generate wardrobe';
+    trackEvent('wardrobe_generation_failed', { error: backendMessage });
     throw new Error(backendMessage);
   }
 }
@@ -101,6 +112,11 @@ export async function markAsOwned(id: string): Promise<void> {
     try {
       const endpointId = (item as any)._id || item.id;
       await api.put(`/style/wardrobe/${endpointId}`, { status: 'owned' });
+      trackEvent('wardrobe_item_owned', {
+        itemId: endpointId,
+        name: item.name,
+        category: item.category,
+      });
     } catch (e) { console.error(e) }
     emit();
   }
@@ -113,6 +129,11 @@ export async function removeWardrobeItem(id: string): Promise<void> {
     try {
       const endpointId = (item as any)._id || item.id;
       await api.delete(`/style/wardrobe/${endpointId}`);
+      trackEvent('wardrobe_item_deleted', {
+        itemId: endpointId,
+        name: item.name,
+        category: item.category,
+      });
     } catch (e) { console.error(e) }
   }
   emit();
@@ -124,6 +145,10 @@ export async function swapItem(id: string): Promise<void> {
     const item = wardrobe[itemIndex];
     const p = getProfile();
     try {
+      trackEvent('wardrobe_item_swap_requested', {
+        itemId: item.id || (item as any)._id,
+        category: item.category,
+      });
       const res = await api.post('/style/wardrobe/generate-single', {
         primaryStyle: p?.primaryStyle || 'casual',
         secondaryStyles: p?.secondaryStyles || [],
@@ -131,9 +156,17 @@ export async function swapItem(id: string): Promise<void> {
         priorityPhase: item.priorityPhase,
       });
       // Replace the item with the newly generated AI item
-      wardrobe[itemIndex] = res.data;
+      const newItem = res.data;
+      wardrobe[itemIndex] = newItem;
       emit();
       
+      trackEvent('wardrobe_item_swap_succeeded', {
+        oldItemId: item.id || (item as any)._id,
+        newItemId: newItem._id || newItem.id,
+        category: newItem.category,
+        name: newItem.name,
+      });
+
       // Also delete the old one from the backend
       try {
         const endpointId = (item as any)._id || item.id;
@@ -142,6 +175,10 @@ export async function swapItem(id: string): Promise<void> {
     } catch (error: any) {
       console.error('Failed to swap wardrobe item via AI', error.response?.data || error);
       const backendMessage = error.response?.data?.message || error.message || 'Failed to swap item';
+      trackEvent('wardrobe_item_swap_failed', {
+        itemId: item.id || (item as any)._id,
+        error: backendMessage,
+      });
       throw new Error(backendMessage);
     }
   }

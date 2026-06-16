@@ -10,6 +10,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useAuth } from '@/lib/AuthContext';
 import api from '@/lib/api';
 import { useRouter } from 'expo-router';
+import { trackEvent } from '@/lib/posthog';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -42,8 +43,10 @@ export default function LoginScreen() {
         platform: Platform.OS
       });
       await signIn(res.data.token, res.data);
-    } catch (error) {
+      trackEvent('login_success', { provider: 'google' });
+    } catch (error: any) {
       console.error('Google Sign In Failed', error);
+      trackEvent('login_failed', { provider: 'google', reason: error.message || 'unknown' });
     }
   };
 
@@ -61,11 +64,13 @@ export default function LoginScreen() {
         name: credential.fullName?.givenName ? `${credential.fullName.givenName} ${credential.fullName.familyName}` : undefined
       });
       await signIn(res.data.token, res.data);
+      trackEvent('login_success', { provider: 'apple' });
     } catch (e: any) {
       if (e.code === 'ERR_REQUEST_CANCELED') {
-        // handle that the user canceled the sign-in flow
+        trackEvent('login_cancelled', { provider: 'apple' });
       } else {
         console.error('Apple Sign In Failed', e);
+        trackEvent('login_failed', { provider: 'apple', reason: e.message || 'unknown' });
       }
     }
   };
@@ -76,7 +81,9 @@ export default function LoginScreen() {
       setError('');
       const res = await api.post('/auth/login', { email, password });
       await signIn(res.data.token, res.data);
+      trackEvent('login_success', { provider: 'email' });
     } catch (e: any) {
+      trackEvent('login_failed', { provider: 'email', reason: e.message || 'unknown' });
       if (e.message === 'Network Error') {
         setError('Cannot connect to server. Please check your internet connection and API URL.');
       } else if (e.response?.status === 403 && e.response?.data?.code === 'EMAIL_NOT_VERIFIED') {

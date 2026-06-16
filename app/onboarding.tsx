@@ -10,6 +10,7 @@ import { Pressable } from 'react-native';
 import { ONBOARDING_SLIDES, ONBOARDING_CHROME } from '@/constants/Onboarding';
 import { Text } from '@/components/ui/Text';
 import { useOnboarded } from './_layout';
+import { trackEvent } from '@/lib/posthog';
 
 const { width } = Dimensions.get('window');
 
@@ -69,6 +70,7 @@ export default function OnboardingScreen() {
 
   const handleComplete = async () => {
     try {
+      trackEvent('onboarding_completed', { method: 'complete' });
       await AsyncStorage.setItem('onboarded', '1');
       setIsOnboarded(true);
       router.replace('/(auth)/login');
@@ -81,6 +83,7 @@ export default function OnboardingScreen() {
 
   const handleSkip = async () => {
     try {
+      trackEvent('onboarding_completed', { method: 'skip' });
       await AsyncStorage.setItem('onboarded', '1');
       setIsOnboarded(true);
       router.replace('/(auth)/login');
@@ -112,7 +115,12 @@ export default function OnboardingScreen() {
 
   React.useEffect(() => {
     animateSlideContent();
+    trackEvent('onboarding_started');
   }, []);
+
+  React.useEffect(() => {
+    trackEvent('onboarding_slide_changed', { step: currentStep, title: slides[currentStep].title });
+  }, [currentStep]);
 
   const renderSlide = ({ item, index }: { item: SlideData; index: number }) => {
     const slide = ONBOARDING_SLIDES[index];

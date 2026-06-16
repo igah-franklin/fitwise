@@ -37,6 +37,7 @@ import {
 import { buildWardrobe } from '@/lib/wardrobe';
 import { useSubscription } from '@/lib/subscription';
 import type { BudgetRange, StyleType } from '@/lib/types';
+import { trackEvent } from '@/lib/posthog';
 
 const STEPS = [
   { title: 'Welcome to WearThis', subtitle: "Before we curate your wardrobe, let's understand you better. Here is why we need a few details:" },
@@ -89,13 +90,19 @@ export default function SetupScreen() {
     (f) => measurements[f.key].trim().length > 0,
   );
 
+  useEffect(() => {
+    trackEvent('profile_setup_started');
+  }, []);
+
+  useEffect(() => {
+    trackEvent('profile_setup_step_changed', { step, stepTitle: STEPS[step].title });
+  }, [step]);
+
   const updateMeasurement = (key: keyof Measurements, value: string) => {
     // digits only
     const clean = value.replace(/[^0-9]/g, '');
     setMeasurements((prev) => ({ ...prev, [key]: clean }));
   };
-
-
 
   const toggleSecondary = (style: StyleType) => {
     setSecondaryStyles((prev) =>
@@ -171,11 +178,20 @@ export default function SetupScreen() {
       };
       await saveProfile(profile);
 
+      trackEvent('profile_setup_completed', {
+        gender,
+        primaryStyle,
+        secondaryStylesCount: secondaryStyles.length,
+        budget,
+        hasPhotos: !!(photos.front || photos.side),
+      });
+
       // After a successful wardrobe generation, always land the user on the
       // wardrobe tab so they see the pieces that were just created.
       router.replace('/(tabs)/wardrobe');
     } catch (error: any) {
       setSubmitting(false);
+      trackEvent('profile_setup_failed', { error: error.message || 'unknown' });
       const errMsg = (error.message || '').toLowerCase();
       if (errMsg.includes('limit') || errMsg.includes('exceeded') || errMsg.includes('403')) {
         Alert.alert(

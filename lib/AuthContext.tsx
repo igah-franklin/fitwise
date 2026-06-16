@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import api from './api';
+import { identifyUser, resetUser, trackEvent } from './posthog';
 
 export type UserProfile = {
   _id: string;
@@ -33,7 +34,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const token = await SecureStore.getItemAsync('token');
         if (token) {
           const res = await api.get('/auth/me', { timeout: 5000 });
-          setUser(res.data);
+          const userProfile = res.data;
+          setUser(userProfile);
+          identifyUser(userProfile._id, userProfile.email, userProfile.name);
+          trackEvent('user_session_restored');
         }
       } catch (error) {
         console.log('Failed to restore token or fetch user profile', error);
@@ -48,9 +52,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (token: string, userProfile: UserProfile) => {
     await SecureStore.setItemAsync('token', token);
     setUser(userProfile);
+    identifyUser(userProfile._id, userProfile.email, userProfile.name);
+    trackEvent('user_signed_in');
   };
 
   const signOut = async () => {
+    trackEvent('user_signed_out');
+    resetUser();
     await SecureStore.deleteItemAsync('token');
     setUser(null);
   };

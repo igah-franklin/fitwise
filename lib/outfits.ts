@@ -8,6 +8,7 @@
 import type { Outfit, OutfitItem, OutfitOccasion } from './types';
 import { getWardrobe } from './wardrobe';
 import { getProfile } from './profile';
+import { trackEvent } from './posthog';
 
 // ─── Occasion metadata + recipes ─────────────────────────────────
 
@@ -146,7 +147,9 @@ export async function removeOutfit(id: string): Promise<void> {
     const outfit = store[index];
     store.splice(index, 1);
     try {
-      await api.delete(`/style/outfits/${(outfit as any)._id || outfit.id}`);
+      const endpointId = (outfit as any)._id || outfit.id;
+      await api.delete(`/style/outfits/${endpointId}`);
+      trackEvent('outfit_deleted', { outfitId: endpointId, occasion: outfit.occasion });
     } catch (e) { console.error(e) }
   }
 }
@@ -172,6 +175,10 @@ export async function generateOutfit(occasion: OutfitOccasion, photo?: string): 
   const weatherContext = mockWeather[Math.floor(Math.random() * mockWeather.length)];
   
   try {
+    trackEvent('outfit_generation_requested', {
+      occasion,
+      hasLikenessPhoto: !!photo,
+    });
     const payload = {
       occasion,
       weatherContext,
@@ -190,6 +197,10 @@ export async function generateOutfit(occasion: OutfitOccasion, photo?: string): 
         wardrobeItem: i.wardrobeItemId || i.wardrobeItem
       }));
       store.unshift(created);
+      trackEvent('outfit_generation_succeeded', {
+        occasion,
+        outfitId: created.id,
+      });
       return created;
     } else {
       throw new Error('No data returned from backend');
@@ -198,6 +209,10 @@ export async function generateOutfit(occasion: OutfitOccasion, photo?: string): 
     console.error('Failed to save outfit to backend', e.response?.data || e);
     // Throw the readable backend error up to the UI so it can alert the user
     const backendMessage = e.response?.data?.message || e.message || 'Failed to generate outfit';
+    trackEvent('outfit_generation_failed', {
+      occasion,
+      error: backendMessage,
+    });
     throw new Error(backendMessage);
   }
 }
@@ -216,7 +231,13 @@ export async function updateOutfitFeedback(
   const next = outfit.feedback === feedback ? undefined : feedback;
   outfit.feedback = next;
   try {
-    await api.put(`/style/outfits/${(outfit as any)._id || outfit.id}`, { feedback: next ?? null });
+    const endpointId = (outfit as any)._id || outfit.id;
+    await api.put(`/style/outfits/${endpointId}`, { feedback: next ?? null });
+    trackEvent('outfit_feedback_updated', {
+      outfitId: endpointId,
+      feedback: next || 'none',
+      occasion: outfit.occasion,
+    });
   } catch (e) {
     console.error('Failed to persist outfit feedback', e);
   }
@@ -232,7 +253,13 @@ export async function toggleOutfitPin(id: string): Promise<boolean> {
   const next = !outfit.pinned;
   outfit.pinned = next;
   try {
-    await api.put(`/style/outfits/${(outfit as any)._id || outfit.id}`, { pinned: next });
+    const endpointId = (outfit as any)._id || outfit.id;
+    await api.put(`/style/outfits/${endpointId}`, { pinned: next });
+    trackEvent('outfit_pin_toggled', {
+      outfitId: endpointId,
+      pinned: next,
+      occasion: outfit.occasion,
+    });
   } catch (e) {
     console.error('Failed to persist outfit pin', e);
   }

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/constants/Colors';
 import api from '@/lib/api';
+import { trackEvent } from '@/lib/posthog';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function SignupScreen() {
       setIsLoading(true);
       setError('');
       await api.post('/auth/register', { name, email, password });
+      trackEvent('registration_success', { email });
 
       // Navigate to verification screen on success
       router.push({
@@ -32,6 +34,7 @@ export default function SignupScreen() {
         params: { email }
       });
     } catch (e: any) {
+      trackEvent('registration_failed', { email, reason: e.message || 'unknown' });
       if (e.message === 'Network Error') {
         setError('Cannot connect to server. Please check your internet connection and API URL.');
       } else {
