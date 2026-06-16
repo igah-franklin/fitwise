@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import { Screen } from '@/components/ui/Screen';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -11,6 +11,7 @@ import { useAuth } from '@/lib/AuthContext';
 import api from '@/lib/api';
 import { useRouter } from 'expo-router';
 import { trackEvent } from '@/lib/posthog';
+import { Ionicons } from '@expo/vector-icons';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -110,9 +111,20 @@ export default function LoginScreen() {
         <Input label="Email" placeholder="you@example.com" keyboardType="email-address" value={email} onChangeText={setEmail} />
         <Input label="Password" placeholder="••••••••" secureTextEntry style={styles.passwordInput} value={password} onChangeText={setPassword} />
 
+        <View style={styles.forgotPasswordContainer}>
+          <Pressable 
+            onPress={() => router.push('/(auth)/forgot-password')}
+            style={({ pressed }) => [
+              styles.forgotPasswordPressable,
+              pressed && styles.pressedState
+            ]}
+          >
+            <Ionicons name="key-outline" size={14} color={Colors.light.primary} style={styles.forgotPasswordIcon} />
+            <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+          </Pressable>
+        </View>
+
         <Button title="Sign In" variant="primary" style={styles.signInButton} onPress={handleEmailSignIn} loading={isLoading} />
-        <Button title="Forgot Password?" variant="ghost" style={styles.forgotPasswordButton} onPress={() => router.push('/(auth)/forgot-password')} />
-        <Button title="Create Account" variant="ghost" style={styles.createButton} onPress={() => router.push('/(auth)/signup')} />
 
         <View style={styles.divider}>
           <View style={styles.line} />
@@ -136,6 +148,19 @@ export default function LoginScreen() {
             onPress={handleAppleSignIn}
           />
         )}
+
+        <View style={styles.signUpContainer}>
+          <Text style={styles.signUpText}>New to WearThis?</Text>
+          <Pressable 
+            onPress={() => router.push('/(auth)/signup')}
+            style={({ pressed }) => [
+              styles.signUpButton,
+              pressed && styles.signUpButtonPressed
+            ]}
+          >
+            <Text style={styles.signUpButtonText}>Create an Account</Text>
+          </Pressable>
+        </View>
       </View>
     </Screen>
   );
@@ -168,13 +193,68 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   signInButton: {
-    marginTop: 24,
+    marginTop: 8,
   },
-  forgotPasswordButton: {
-    marginTop: 12,
-  },
-  createButton: {
+  forgotPasswordContainer: {
+    alignSelf: 'flex-end',
     marginTop: 6,
+    marginBottom: 20,
+  },
+  forgotPasswordPressable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  forgotPasswordIcon: {
+    marginRight: 6,
+  },
+  forgotPasswordText: {
+    color: Colors.light.primary,
+    fontSize: 13,
+    fontFamily: 'Inter-SemiBold',
+  },
+  pressedState: {
+    opacity: 0.7,
+    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+  },
+  signUpContainer: {
+    marginTop: 40,
+    marginBottom: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderTopWidth: 1,
+    borderTopColor: Colors.light.divider,
+    paddingTop: 24,
+  },
+  signUpText: {
+    color: Colors.light.textMuted,
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
+  signUpButton: {
+    width: '100%',
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.25)',
+    backgroundColor: 'rgba(99, 102, 241, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signUpButtonPressed: {
+    opacity: 0.8,
+    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+    borderColor: 'rgba(99, 102, 241, 0.4)',
+  },
+  signUpButtonText: {
+    color: Colors.light.primary,
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
   },
   divider: {
     flexDirection: 'row',

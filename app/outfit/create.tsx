@@ -39,7 +39,7 @@ export default function CreateOutfitScreen() {
   const insets = useSafeAreaInsets();
   const { usage, subscriptionTier, refreshSubscription } = useSubscription();
   const profile = useProfile();
-  const hasSavedPhotos = !!(profile?.photos?.front || profile?.photos?.side);
+  const hasSavedPhotos = Array.isArray(profile?.photos) && profile.photos.length > 0;
 
   const [step, setStep] = useState<0 | 1>(0);
   const [selectedOccasion, setSelectedOccasion] = useState<OutfitOccasion | null>(null);
@@ -124,9 +124,14 @@ export default function CreateOutfitScreen() {
     try {
       let base64Photo: string | undefined;
       if (photo) {
-        base64Photo = await FileSystem.readAsStringAsync(photo, {
-          encoding: 'base64',
-        });
+        if (photo.startsWith('http://') || photo.startsWith('https://')) {
+          base64Photo = photo;
+        } else {
+          const rawBase64 = await FileSystem.readAsStringAsync(photo, {
+            encoding: 'base64',
+          });
+          base64Photo = `data:image/jpeg;base64,${rawBase64}`;
+        }
       }
 
       const newOutfit = await generateOutfit(selectedOccasion, base64Photo);
@@ -315,32 +320,21 @@ export default function CreateOutfitScreen() {
                         <Text style={styles.savedPortraitsHeader}>
                           Select from Saved Portraits:
                         </Text>
-                        <View style={styles.savedRow}>
-                          {profile?.photos?.front && (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.savedRow}>
+                          {profile?.photos?.map((photoUrl, index) => (
                             <PressScale
+                              key={photoUrl}
                               style={[
                                 styles.savedThumbnailWrapper,
-                                photo === profile.photos.front && styles.activeThumbnail
+                                photo === photoUrl && styles.activeThumbnail
                               ]}
-                              onPress={() => setPhoto(profile.photos.front!)}
+                              onPress={() => setPhoto(photoUrl)}
                             >
-                              <Image source={{ uri: profile.photos.front }} style={styles.savedThumbnail} />
-                              <Text style={styles.thumbnailLabel}>Front View</Text>
+                              <Image source={{ uri: photoUrl }} style={styles.savedThumbnail} />
+                              <Text style={styles.thumbnailLabel}>Selfie {index + 1}</Text>
                             </PressScale>
-                          )}
-                          {profile?.photos?.side && (
-                            <PressScale
-                              style={[
-                                styles.savedThumbnailWrapper,
-                                photo === profile.photos.side && styles.activeThumbnail
-                              ]}
-                              onPress={() => setPhoto(profile.photos.side!)}
-                            >
-                              <Image source={{ uri: profile.photos.side }} style={styles.savedThumbnail} />
-                              <Text style={styles.thumbnailLabel}>Side View</Text>
-                            </PressScale>
-                          )}
-                        </View>
+                          ))}
+                        </ScrollView>
                         <Text style={styles.orDivider}>
                           — OR UPLOAD NEW —
                         </Text>
@@ -546,7 +540,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
     gap: Layout.spacing.md,
   },
   savedThumbnailWrapper: {
-    flex: 1,
+    width: 90,
     height: 120,
     borderRadius: 12,
     borderWidth: 1.5,

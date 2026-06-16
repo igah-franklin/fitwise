@@ -30,18 +30,6 @@ export function occasionLabel(occasion: OutfitOccasion): string {
 }
 
 
-const GENERATED_NAMES: Record<OutfitOccasion, string> = {
-  casual: 'Easy Weekend',
-  work: 'Sharp Workday',
-  'date-night': 'Date Night Standout',
-  'night-out': 'After Dark',
-  travel: 'Travel Ready',
-  wedding: 'Wedding Guest',
-  'business-meeting': 'Boardroom Ready',
-  vacation: 'Vacation Mode',
-  errands: 'Quick Errands',
-  gym: 'Active Day',
-};
 
 const PREVIEW_BY_OCCASION: Record<OutfitOccasion, string> = {
   casual: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=800&fit=crop',
@@ -55,51 +43,6 @@ const PREVIEW_BY_OCCASION: Record<OutfitOccasion, string> = {
   errands: 'https://images.unsplash.com/photo-1516257984-b1b4d707412e?w=600&h=800&fit=crop',
   gym: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=600&h=800&fit=crop',
 };
-
-function buildItems(occasion: OutfitOccasion, outfitId: string): OutfitItem[] {
-  const wardrobe = getWardrobe();
-  // If no wardrobe, return empty
-  if (wardrobe.length === 0) return [];
-  
-  // Pick 3-4 random items from the user's actual generated wardrobe
-  const count = Math.min(wardrobe.length, Math.floor(Math.random() * 2) + 3);
-  const shuffled = [...wardrobe].sort(() => 0.5 - Math.random());
-  const selected = shuffled.slice(0, count);
-
-  return selected.map((wardrobeItem) => ({
-    id: `${outfitId}-${wardrobeItem.id}`,
-    wardrobeItemId: wardrobeItem.id,
-    wardrobeItem,
-  }));
-}
-
-/**
- * The preview image for a generated outfit. When the user has uploaded a photo
- * we use it as the base so previews reflect their own face/body shape.
- */
-function previewFor(occasion: OutfitOccasion): string {
-  return getProfile()?.photos?.front ?? PREVIEW_BY_OCCASION[occasion];
-}
-
-// ─── Store ───────────────────────────────────────────────────────
-
-function makeOutfit(
-  id: string,
-  occasion: OutfitOccasion,
-  name: string,
-  createdAt: string,
-  previewUrl: string,
-): Outfit {
-  return {
-    id,
-    userId: 'user1',
-    name,
-    occasion,
-    items: buildItems(occasion, id),
-    previewUrl,
-    createdAt,
-  };
-}
 
 import api from './api';
 
@@ -166,14 +109,13 @@ const mockWeather = [
   { temp: 8, condition: 'Rainy' },
 ];
 
-let generatedCount = 0;
 /**
  * Generate a new outfit for the given occasion from the user's wardrobe, add it
  * to the store (newest first) and return it.
  */
 export async function generateOutfit(occasion: OutfitOccasion, photo?: string): Promise<Outfit> {
   const weatherContext = mockWeather[Math.floor(Math.random() * mockWeather.length)];
-  
+
   try {
     trackEvent('outfit_generation_requested', {
       occasion,
@@ -184,10 +126,10 @@ export async function generateOutfit(occasion: OutfitOccasion, photo?: string): 
       weatherContext,
       photo,
     };
-    
+
     // Call our new AI generation endpoint
     const res = await api.post('/style/outfits/generate', payload);
-    
+
     if (res.data) {
       // Re-hydrate the items from the returned populated object
       const created = res.data;

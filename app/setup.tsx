@@ -82,7 +82,7 @@ export default function SetupScreen() {
     existing?.secondaryStyles ?? [],
   );
   const [budget, setBudget] = useState<BudgetRange>(existing?.budget ?? 'mid-range');
-  const [photos, setPhotos] = useState<ProfilePhotos>(existing?.photos ?? {});
+  const [photos, setPhotos] = useState<ProfilePhotos>(existing?.photos ?? []);
 
   const isLastStep = step === STEPS.length - 1;
 
@@ -183,7 +183,7 @@ export default function SetupScreen() {
         primaryStyle,
         secondaryStylesCount: secondaryStyles.length,
         budget,
-        hasPhotos: !!(photos.front || photos.side),
+        hasPhotos: photos.length > 0,
       });
 
       // After a successful wardrobe generation, always land the user on the
