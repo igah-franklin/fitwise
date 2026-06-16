@@ -62,12 +62,7 @@ export default function VerifyScreen() {
       setIsLoading(true);
       setError('');
       await api.post('/auth/verify-email', { email, code: fullCode });
-      
-      Alert.alert(
-        'Success',
-        'Your email has been successfully verified. Please log in to continue.',
-        [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
-      );
+      router.replace('/(auth)/verified');
     } catch (e: any) {
       setError(e.response?.data?.message || 'Verification failed');
     } finally {

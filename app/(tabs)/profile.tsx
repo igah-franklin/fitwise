@@ -23,20 +23,26 @@ interface ProfileSectionProps {
   onPress?: () => void;
   icon: keyof typeof Ionicons.glyphMap;
   showChevron?: boolean;
+  danger?: boolean;
 }
 
-function ProfileSection({ title, value, onPress, icon, showChevron = true }: ProfileSectionProps) {
+function ProfileSection({ title, value, onPress, icon, showChevron = true, danger = false }: ProfileSectionProps) {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
+
+  const iconColor = danger ? theme.danger : theme.primary;
+  const iconBg = danger ? `${theme.danger}1A` : theme.primaryMuted; // 10% opacity hex
+  const titleColor = danger ? theme.danger : theme.text;
+
   return (
     <PressScale onPress={onPress} style={styles.sectionCard}>
       <View style={styles.sectionContent}>
         <View style={styles.sectionLeft}>
-          <View style={styles.sectionIcon}>
-            <Ionicons name={icon} size={20} color={theme.primary} />
+          <View style={[styles.sectionIcon, { backgroundColor: iconBg }]}>
+            <Ionicons name={icon} size={20} color={iconColor} />
           </View>
           <View style={styles.sectionText}>
-            <Text style={styles.sectionTitle}>{title}</Text>
+            <Text style={[styles.sectionTitle, { color: titleColor }]}>{title}</Text>
             {value && <Text style={styles.sectionValue}>{value}</Text>}
           </View>
         </View>
@@ -62,7 +68,7 @@ export default function ProfileScreen() {
     toShop: wardrobe.filter((i) => i.status === 'recommended').length,
   };
 
-  const photoCount = profile ? [profile.photos?.front, profile.photos?.side].filter(Boolean).length : 0;
+  const photoCount = profile && Array.isArray(profile.photos) ? profile.photos.filter(Boolean).length : 0;
   const styleValue = profile && profile.primaryStyle
     ? styleLabel(profile.primaryStyle) +
     (profile.secondaryStyles?.length ? `, +${profile.secondaryStyles.length} more` : '')
@@ -72,18 +78,6 @@ export default function ProfileScreen() {
 
   const toggleTheme = () => {
     setTheme(themeName === 'light' ? 'dark' : 'light');
-  };
-
-  const handleNotifications = () => {
-    Alert.alert('Notifications', 'Manage your notification preferences.');
-  };
-
-  const handlePrivacy = () => {
-    Alert.alert('Privacy', 'Review and update your privacy settings.');
-  };
-
-  const handleHelp = () => {
-    Alert.alert('Help & Support', 'Get help with using the app.');
   };
 
   const handleSignOut = () => {
@@ -207,40 +201,40 @@ export default function ProfileScreen() {
               </View>
             </SlideUp>
 
-          {/* Subscription Section */}
-          <SlideUp>
-            <Text style={styles.sectionHeader}>Subscription</Text>
-            <Card padding="md" style={[styles.subscriptionCard, { borderColor: subscriptionTier !== 'free' ? theme.primary : theme.border }]}>
-              <View style={styles.subscriptionHeader}>
-                <View style={[styles.subscriptionIconContainer, { backgroundColor: subscriptionTier !== 'free' ? theme.primaryMuted : theme.divider }]}>
-                  <Ionicons
-                    name="sparkles"
-                    size={20}
-                    color={subscriptionTier !== 'free' ? theme.primary : theme.textMuted}
-                  />
+            {/* Subscription Section */}
+            <SlideUp>
+              <Text style={styles.sectionHeader}>Subscription</Text>
+              <Card padding="md" style={[styles.subscriptionCard, { borderColor: subscriptionTier !== 'free' ? theme.primary : theme.border }]}>
+                <View style={styles.subscriptionHeader}>
+                  <View style={[styles.subscriptionIconContainer, { backgroundColor: subscriptionTier !== 'free' ? theme.primaryMuted : theme.divider }]}>
+                    <Ionicons
+                      name="sparkles"
+                      size={20}
+                      color={subscriptionTier !== 'free' ? theme.primary : theme.textMuted}
+                    />
+                  </View>
+                  <View style={styles.subscriptionDetails}>
+                    <Text style={{ fontSize: 16, fontFamily: 'Inter-Bold', color: theme.text }}>
+                      {subscriptionTier === 'free' ? 'Free Tier' : subscriptionTier === 'pro' ? 'WearThis Pro' : 'WearThis Elite'}
+                    </Text>
+                    <Text style={{ fontSize: 13, fontFamily: 'Inter', color: theme.textSecondary, marginTop: 4, lineHeight: 18 }}>
+                      {subscriptionTier === 'free'
+                        ? 'Limited to 20 wardrobe items and 3 outfits/mo'
+                        : subscriptionTier === 'pro'
+                          ? 'Limited to 150 wardrobe items and 100 outfits/mo'
+                          : 'Unlimited wardrobe items and outfits'}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.subscriptionDetails}>
-                  <Text style={{ fontSize: 16, fontFamily: 'Inter-Bold', color: theme.text }}>
-                    {subscriptionTier === 'free' ? 'Free Tier' : subscriptionTier === 'pro' ? 'WearThis Pro' : 'WearThis Elite'}
-                  </Text>
-                  <Text style={{ fontSize: 13, fontFamily: 'Inter', color: theme.textSecondary, marginTop: 4, lineHeight: 18 }}>
-                    {subscriptionTier === 'free'
-                      ? 'Limited to 20 wardrobe items and 3 outfits/mo'
-                      : subscriptionTier === 'pro'
-                      ? 'Limited to 150 wardrobe items and 100 outfits/mo'
-                      : 'Unlimited wardrobe items and outfits'}
-                  </Text>
-                </View>
-              </View>
-              <Button
-                title={subscriptionTier === 'premium' ? 'Manage Subscription' : 'Upgrade Plan'}
-                variant={subscriptionTier === 'free' ? 'primary' : 'outline'}
-                onPress={() => router.push('/paywall')}
-                style={{ marginTop: 14 }}
-                size="sm"
-              />
-            </Card>
-          </SlideUp>
+                <Button
+                  title={subscriptionTier === 'premium' ? 'Manage Subscription' : 'Upgrade Plan'}
+                  variant={subscriptionTier === 'free' ? 'primary' : 'outline'}
+                  onPress={() => router.push('/paywall')}
+                  style={{ marginTop: 14 }}
+                  size="sm"
+                />
+              </Card>
+            </SlideUp>
 
             {/* App Settings */}
             <SlideUp>
@@ -253,41 +247,27 @@ export default function ProfileScreen() {
                   onPress={toggleTheme}
                   showChevron={false}
                 />
-                {/* <ProfileSection
-                  title="Notifications"
-                  icon="notifications-outline"
-                  onPress={handleNotifications}
-                />
-                <ProfileSection
-                  title="Privacy & Security"
-                  icon="shield-checkmark-outline"
-                  onPress={handlePrivacy}
-                />
-                <ProfileSection
-                  title="Help & Support"
-                  icon="help-circle-outline"
-                  onPress={handleHelp}
-                /> */}
               </View>
             </SlideUp>
 
-            {/* Sign Out */}
+            {/* Account Settings */}
             <SlideUp>
-              <Button
-                title="Sign Out"
-                variant="ghost"
-                onPress={handleSignOut}
-                style={styles.signOutButton}
-                icon={<Ionicons name="log-out-outline" size={18} color={theme.textMuted} />}
-              />
-              <Button
-                title="Delete Account"
-                variant="ghost"
-                onPress={handleDeleteAccount}
-                style={styles.deleteAccountButton}
-                icon={<Ionicons name="trash-outline" size={18} color={theme.danger} />}
-                textStyle={{ color: theme.danger }}
-              />
+              <Text style={styles.sectionHeader}>Account</Text>
+              <View style={[styles.sectionsContainer, { marginBottom: Layout.spacing.xxl }]}>
+                <ProfileSection
+                  title="Sign Out"
+                  icon="log-out-outline"
+                  onPress={handleSignOut}
+                  showChevron={false}
+                />
+                <ProfileSection
+                  title="Delete Account"
+                  icon="trash-outline"
+                  onPress={handleDeleteAccount}
+                  showChevron={false}
+                  danger={true}
+                />
+              </View>
             </SlideUp>
           </Stagger>
         </View>
@@ -420,13 +400,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
     fontSize: 13,
     color: theme.textSecondary,
   },
-  signOutButton: {
-    marginTop: Layout.spacing.md,
-  },
-  deleteAccountButton: {
-    marginTop: Layout.spacing.sm,
-    marginBottom: Layout.spacing.xxl,
-  },
+
   subscriptionCard: {
     marginBottom: Layout.spacing.lg,
     borderWidth: 2,

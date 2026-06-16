@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#6366F1"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -22,13 +22,16 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#6366F1"
       },
       "package": "com.approom.wearthis"
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "output": "single"
-    }
+    },
+    "plugins": [
+      "expo-localization"
+    ]
   }
 }

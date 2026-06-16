@@ -37,6 +37,7 @@ import {
 import { buildWardrobe } from '@/lib/wardrobe';
 import { useSubscription } from '@/lib/subscription';
 import type { BudgetRange, StyleType } from '@/lib/types';
+import { trackEvent } from '@/lib/posthog';
 
 const STEPS = [
   { title: 'Welcome to WearThis', subtitle: "Before we curate your wardrobe, let's understand you better. Here is why we need a few details:" },
@@ -81,7 +82,7 @@ export default function SetupScreen() {
     existing?.secondaryStyles ?? [],
   );
   const [budget, setBudget] = useState<BudgetRange>(existing?.budget ?? 'mid-range');
-  const [photos, setPhotos] = useState<ProfilePhotos>(existing?.photos ?? {});
+  const [photos, setPhotos] = useState<ProfilePhotos>(existing?.photos ?? []);
 
   const isLastStep = step === STEPS.length - 1;
 
@@ -89,13 +90,19 @@ export default function SetupScreen() {
     (f) => measurements[f.key].trim().length > 0,
   );
 
+  useEffect(() => {
+    trackEvent('profile_setup_started');
+  }, []);
+
+  useEffect(() => {
+    trackEvent('profile_setup_step_changed', { step, stepTitle: STEPS[step].title });
+  }, [step]);
+
   const updateMeasurement = (key: keyof Measurements, value: string) => {
     // digits only
     const clean = value.replace(/[^0-9]/g, '');
     setMeasurements((prev) => ({ ...prev, [key]: clean }));
   };
-
-
 
   const toggleSecondary = (style: StyleType) => {
     setSecondaryStyles((prev) =>
@@ -171,11 +178,20 @@ export default function SetupScreen() {
       };
       await saveProfile(profile);
 
+      trackEvent('profile_setup_completed', {
+        gender,
+        primaryStyle,
+        secondaryStylesCount: secondaryStyles.length,
+        budget,
+        hasPhotos: photos.length > 0,
+      });
+
       // After a successful wardrobe generation, always land the user on the
       // wardrobe tab so they see the pieces that were just created.
       router.replace('/(tabs)/wardrobe');
     } catch (error: any) {
       setSubmitting(false);
+      trackEvent('profile_setup_failed', { error: error.message || 'unknown' });
       const errMsg = (error.message || '').toLowerCase();
       if (errMsg.includes('limit') || errMsg.includes('exceeded') || errMsg.includes('403')) {
         Alert.alert(
@@ -253,7 +269,7 @@ export default function SetupScreen() {
               </View>
               <Text style={styles.introHeadline}>{STEPS[step].title}</Text>
               <Text style={styles.introBody}>{STEPS[step].subtitle}</Text>
-              
+
               <View style={styles.introFeatureList}>
                 <View style={styles.introFeatureItem}>
                   <View style={styles.introFeatureIconWrapper}>
@@ -264,7 +280,7 @@ export default function SetupScreen() {
                     <Text style={styles.introFeatureDesc}>For clothes that fit your unique body shape perfectly</Text>
                   </View>
                 </View>
-                
+
                 <View style={styles.introFeatureItem}>
                   <View style={styles.introFeatureIconWrapper}>
                     <Ionicons name="shirt-outline" size={24} color={theme.primary} />
@@ -274,7 +290,7 @@ export default function SetupScreen() {
                     <Text style={styles.introFeatureDesc}>To match your personal aesthetic and lifestyle</Text>
                   </View>
                 </View>
-                
+
                 <View style={styles.introFeatureItem}>
                   <View style={styles.introFeatureIconWrapper}>
                     <Ionicons name="wallet-outline" size={24} color={theme.primary} />

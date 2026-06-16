@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Pressable, ActivityIndicator, Alert, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/lib/theme';
 import { useSubscription } from '@/lib/subscription';
 import api from '@/lib/api';
+import { trackEvent } from '@/lib/posthog';
 
 export default function PaywallScreen() {
   const { theme } = useTheme();
@@ -18,6 +19,10 @@ export default function PaywallScreen() {
   const [selectedPlan, setSelectedPlan] = useState<'pro' | 'premium'>('pro');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+
+  useEffect(() => {
+    trackEvent('paywall_viewed', { currentTier: subscriptionTier });
+  }, []);
 
   // Define features list for Pro
   const proFeatures = [
@@ -40,6 +45,7 @@ export default function PaywallScreen() {
   // Map tier to packaging info
   const handleSubscribe = async () => {
     setIsSubmitting(true);
+    trackEvent('subscription_purchase_initiated', { plan: selectedPlan });
     try {
       // Find RevenueCat package
       let packageToPurchase = null;
@@ -53,9 +59,11 @@ export default function PaywallScreen() {
       if (packageToPurchase) {
         const success = await purchasePackage(packageToPurchase);
         if (success) {
+          trackEvent('subscription_purchase_success', { plan: selectedPlan, method: 'revenuecat' });
           Alert.alert('Success', `Welcome to WearThis ${selectedPlan.toUpperCase()}!`);
           router.back();
         } else {
+          trackEvent('subscription_purchase_failed', { plan: selectedPlan, reason: 'cancelled or failed' });
           Alert.alert('Error', 'Purchase could not be completed.');
         }
       } else {
@@ -64,7 +72,13 @@ export default function PaywallScreen() {
           'Developer Sandbox Mode',
           `No active RevenueCat offerings configured. Would you like to simulate a ${selectedPlan.toUpperCase()} upgrade?`,
           [
-            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Cancel', 
+              style: 'cancel',
+              onPress: () => {
+                trackEvent('subscription_purchase_failed', { plan: selectedPlan, reason: 'sandbox cancelled' });
+              }
+            },
             {
               text: 'Simulate Upgrade',
               onPress: async () => {
@@ -72,10 +86,12 @@ export default function PaywallScreen() {
                   const res = await api.post('/subscription/dev-upgrade', { tier: selectedPlan });
                   if (res.data.success) {
                     await refreshSubscription();
+                    trackEvent('subscription_purchase_success', { plan: selectedPlan, method: 'dev_upgrade' });
                     Alert.alert('Success', `Account upgraded to ${selectedPlan} (Simulated)`);
                     router.back();
                   }
                 } catch (err) {
+                  trackEvent('subscription_purchase_failed', { plan: selectedPlan, reason: 'dev_upgrade_failed' });
                   Alert.alert('Error', 'Failed to simulate upgrade.');
                 }
               },
@@ -83,8 +99,9 @@ export default function PaywallScreen() {
           ]
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Subscription error:', error);
+      trackEvent('subscription_purchase_failed', { plan: selectedPlan, reason: error.message || 'unknown' });
       Alert.alert('Error', 'An unexpected error occurred.');
     } finally {
       setIsSubmitting(false);

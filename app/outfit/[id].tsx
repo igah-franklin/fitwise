@@ -22,6 +22,7 @@ import {
 } from '@/lib/outfits';
 import type { ClothingCategory, ItemStatus, OutfitItem } from '@/lib/types';
 import { GeneratingOutfitScreen } from '@/components/GeneratingOutfitScreen';
+import { useSubscription } from '@/lib/subscription';
 
 const CATEGORY_ICON: Record<ClothingCategory, string> = {
   tops: 'shirt-outline',
@@ -41,6 +42,7 @@ const getStatusMeta = (theme: any): Record<ItemStatus, { label: string; color: s
 export default function OutfitDetailsScreen() {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
+  const { subscriptionTier } = useSubscription();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [outfit, setOutfit] = useState(() => (id ? getOutfitById(id) : undefined));
   const [pinned, setPinned] = useState(!!outfit?.pinned);
@@ -160,8 +162,12 @@ export default function OutfitDetailsScreen() {
           <PressScale 
             style={styles.headerButton} 
             onPress={() => {
-              removeOutfit(outfit.id);
-              router.back();
+              if (subscriptionTier === 'free') {
+                router.push('/paywall');
+              } else {
+                removeOutfit(outfit.id);
+                router.back();
+              }
             }} 
             hitSlop={10}
           >

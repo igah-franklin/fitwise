@@ -18,10 +18,7 @@ export interface Measurements {
   inseam: string; // cm
 }
 
-export interface ProfilePhotos {
-  front?: string; // local uri
-  side?: string; // local uri
-}
+export type ProfilePhotos = string[];
 
 export interface UserProfile {
   gender: string;
@@ -49,7 +46,7 @@ export function emptyProfile(): UserProfile {
     primaryStyle: 'smart-casual',
     secondaryStyles: [],
     budget: 'mid-range',
-    photos: {},
+    photos: [],
   };
 }
 

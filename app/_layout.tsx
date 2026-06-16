@@ -10,9 +10,10 @@ import { hydrateWardrobe } from '@/lib/wardrobe';
 import { hydrateOutfits } from '@/lib/outfits';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { SubscriptionProvider } from '@/lib/subscription';
+import { PostHogProvider } from 'posthog-react-native';
+import { posthog } from '@/lib/posthog';
 
 SplashScreen.preventAutoHideAsync();
-
 
 interface OnboardingContextType {
   isOnboarded: boolean | null;
@@ -151,12 +152,14 @@ function AuthGuard({ isOnboarded, themeName, theme }: { isOnboarded: boolean, th
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <SubscriptionProvider>
-          <RootApp />
-        </SubscriptionProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <PostHogProvider client={posthog}>
+      <ThemeProvider>
+        <AuthProvider>
+          <SubscriptionProvider>
+            <RootApp />
+          </SubscriptionProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </PostHogProvider>
   );
 }

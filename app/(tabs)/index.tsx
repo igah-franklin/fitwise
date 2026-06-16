@@ -14,6 +14,7 @@ import { Layout } from '@/constants/Layout';
 import { getOutfits, hydrateOutfits, formatTimeAgo, occasionLabel } from '@/lib/outfits';
 import { useWardrobe } from '@/lib/wardrobe';
 import { EmptyState } from '@/components/layout/EmptyState';
+import { useFeatureFlag } from 'posthog-react-native';
 
 const { width } = Dimensions.get('window');
 // Account for both the Screen's outer padding and the container's inner padding,
@@ -26,6 +27,7 @@ export default function HomeScreen() {
   const styles = makeStyles(theme);
   const wardrobe = useWardrobe();
   const [recentOutfits, setRecentOutfits] = React.useState<any[]>([]);
+  const showPremiumStyles = useFeatureFlag('show-premium-outfit-styles');
 
   useFocusEffect(
     React.useCallback(() => {
@@ -135,6 +137,21 @@ export default function HomeScreen() {
                 </PressScale>
               </View>
             </SlideUp>
+
+            {/* PostHog Feature Flag Demo Callout */}
+            {!!showPremiumStyles && (
+              <SlideUp>
+                <Card style={styles.premiumBanner} padding="md">
+                  <View style={styles.premiumHeader}>
+                    <Ionicons name="sparkles" size={18} color="#FFD700" style={{ marginRight: 8 }} />
+                    <Text style={styles.premiumTag}>Premium Feature Enabled</Text>
+                  </View>
+                  <Text style={styles.premiumText}>
+                    This content is dynamically shown using PostHog feature flags. Try modifying the flag on your PostHog dashboard!
+                  </Text>
+                </Card>
+              </SlideUp>
+            )}
 
             {/* Recent Activity */}
             <SlideUp>
@@ -325,6 +342,28 @@ const makeStyles = (theme: any) => StyleSheet.create({
     color: theme.textMuted,
     textAlign: 'center',
     lineHeight: 16,
+  },
+  premiumBanner: {
+    backgroundColor: '#1E1E2C',
+    borderColor: '#FFD700',
+    borderWidth: 1,
+    borderRadius: Layout.borderRadius.md,
+    marginBottom: Layout.spacing.xl,
+  },
+  premiumHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Layout.spacing.xs,
+  },
+  premiumTag: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFD700',
+  },
+  premiumText: {
+    fontSize: 13,
+    color: '#D1D1D6',
+    lineHeight: 18,
   },
   activityCard: {
     gap: Layout.spacing.md,

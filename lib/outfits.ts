@@ -8,6 +8,7 @@
 import type { Outfit, OutfitItem, OutfitOccasion } from './types';
 import { getWardrobe } from './wardrobe';
 import { getProfile } from './profile';
+import { trackEvent } from './posthog';
 
 // ─── Occasion metadata + recipes ─────────────────────────────────
 
@@ -29,18 +30,6 @@ export function occasionLabel(occasion: OutfitOccasion): string {
 }
 
 
-const GENERATED_NAMES: Record<OutfitOccasion, string> = {
-  casual: 'Easy Weekend',
-  work: 'Sharp Workday',
-  'date-night': 'Date Night Standout',
-  'night-out': 'After Dark',
-  travel: 'Travel Ready',
-  wedding: 'Wedding Guest',
-  'business-meeting': 'Boardroom Ready',
-  vacation: 'Vacation Mode',
-  errands: 'Quick Errands',
-  gym: 'Active Day',
-};
 
 const PREVIEW_BY_OCCASION: Record<OutfitOccasion, string> = {
   casual: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=800&fit=crop',
@@ -54,51 +43,6 @@ const PREVIEW_BY_OCCASION: Record<OutfitOccasion, string> = {
   errands: 'https://images.unsplash.com/photo-1516257984-b1b4d707412e?w=600&h=800&fit=crop',
   gym: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=600&h=800&fit=crop',
 };
-
-function buildItems(occasion: OutfitOccasion, outfitId: string): OutfitItem[] {
-  const wardrobe = getWardrobe();
-  // If no wardrobe, return empty
-  if (wardrobe.length === 0) return [];
-  
-  // Pick 3-4 random items from the user's actual generated wardrobe
-  const count = Math.min(wardrobe.length, Math.floor(Math.random() * 2) + 3);
-  const shuffled = [...wardrobe].sort(() => 0.5 - Math.random());
-  const selected = shuffled.slice(0, count);
-
-  return selected.map((wardrobeItem) => ({
-    id: `${outfitId}-${wardrobeItem.id}`,
-    wardrobeItemId: wardrobeItem.id,
-    wardrobeItem,
-  }));
-}
-
-/**
- * The preview image for a generated outfit. When the user has uploaded a photo
- * we use it as the base so previews reflect their own face/body shape.
- */
-function previewFor(occasion: OutfitOccasion): string {
-  return getProfile()?.photos?.front ?? PREVIEW_BY_OCCASION[occasion];
-}
-
-// ─── Store ───────────────────────────────────────────────────────
-
-function makeOutfit(
-  id: string,
-  occasion: OutfitOccasion,
-  name: string,
-  createdAt: string,
-  previewUrl: string,
-): Outfit {
-  return {
-    id,
-    userId: 'user1',
-    name,
-    occasion,
-    items: buildItems(occasion, id),
-    previewUrl,
-    createdAt,
-  };
-}
 
 import api from './api';
 
@@ -146,7 +90,9 @@ export async function removeOutfit(id: string): Promise<void> {
     const outfit = store[index];
     store.splice(index, 1);
     try {
-      await api.delete(`/style/outfits/${(outfit as any)._id || outfit.id}`);
+      const endpointId = (outfit as any)._id || outfit.id;
+      await api.delete(`/style/outfits/${endpointId}`);
+      trackEvent('outfit_deleted', { outfitId: endpointId, occasion: outfit.occasion });
     } catch (e) { console.error(e) }
   }
 }
@@ -163,24 +109,27 @@ const mockWeather = [
   { temp: 8, condition: 'Rainy' },
 ];
 
-let generatedCount = 0;
 /**
  * Generate a new outfit for the given occasion from the user's wardrobe, add it
  * to the store (newest first) and return it.
  */
 export async function generateOutfit(occasion: OutfitOccasion, photo?: string): Promise<Outfit> {
   const weatherContext = mockWeather[Math.floor(Math.random() * mockWeather.length)];
-  
+
   try {
+    trackEvent('outfit_generation_requested', {
+      occasion,
+      hasLikenessPhoto: !!photo,
+    });
     const payload = {
       occasion,
       weatherContext,
       photo,
     };
-    
+
     // Call our new AI generation endpoint
     const res = await api.post('/style/outfits/generate', payload);
-    
+
     if (res.data) {
       // Re-hydrate the items from the returned populated object
       const created = res.data;
@@ -190,6 +139,10 @@ export async function generateOutfit(occasion: OutfitOccasion, photo?: string): 
         wardrobeItem: i.wardrobeItemId || i.wardrobeItem
       }));
       store.unshift(created);
+      trackEvent('outfit_generation_succeeded', {
+        occasion,
+        outfitId: created.id,
+      });
       return created;
     } else {
       throw new Error('No data returned from backend');
@@ -198,6 +151,10 @@ export async function generateOutfit(occasion: OutfitOccasion, photo?: string): 
     console.error('Failed to save outfit to backend', e.response?.data || e);
     // Throw the readable backend error up to the UI so it can alert the user
     const backendMessage = e.response?.data?.message || e.message || 'Failed to generate outfit';
+    trackEvent('outfit_generation_failed', {
+      occasion,
+      error: backendMessage,
+    });
     throw new Error(backendMessage);
   }
 }
@@ -216,7 +173,13 @@ export async function updateOutfitFeedback(
   const next = outfit.feedback === feedback ? undefined : feedback;
   outfit.feedback = next;
   try {
-    await api.put(`/style/outfits/${(outfit as any)._id || outfit.id}`, { feedback: next ?? null });
+    const endpointId = (outfit as any)._id || outfit.id;
+    await api.put(`/style/outfits/${endpointId}`, { feedback: next ?? null });
+    trackEvent('outfit_feedback_updated', {
+      outfitId: endpointId,
+      feedback: next || 'none',
+      occasion: outfit.occasion,
+    });
   } catch (e) {
     console.error('Failed to persist outfit feedback', e);
   }
@@ -232,7 +195,13 @@ export async function toggleOutfitPin(id: string): Promise<boolean> {
   const next = !outfit.pinned;
   outfit.pinned = next;
   try {
-    await api.put(`/style/outfits/${(outfit as any)._id || outfit.id}`, { pinned: next });
+    const endpointId = (outfit as any)._id || outfit.id;
+    await api.put(`/style/outfits/${endpointId}`, { pinned: next });
+    trackEvent('outfit_pin_toggled', {
+      outfitId: endpointId,
+      pinned: next,
+      occasion: outfit.occasion,
+    });
   } catch (e) {
     console.error('Failed to persist outfit pin', e);
   }
