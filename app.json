@@ -17,21 +17,45 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.approom.wearthis"
+      "bundleIdentifier": "com.vanettesplaceglobal.wearthis",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#6366F1"
       },
-      "package": "com.approom.wearthis"
+      "package": "com.vanettesplaceglobal.wearthis",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "output": "single"
     },
     "plugins": [
-      "expo-localization"
-    ]
+      "expo-localization",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow WearThis to access your camera to take a selfie for generated outfits."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow WearThis to access your photos to select a selfie for generated outfits."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "69ff1470-4fda-4f8c-bdee-21ad2dfa7f93"
+      }
+    }
   }
 }

@@ -1,0 +1,39 @@
+{
+  "cli": {
+    "version": ">= 18.7.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://fitwise-be.onrender.com/api",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "google_ios_client_id",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID": "google_android_client_id",
+        "EXPO_PUBLIC_REVENUECAT_API_KEY_IOS": "your_revenuecat_ios_key",
+        "EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID": "your_revenuecat_android_key",
+        "EXPO_PUBLIC_POSTHOG_API_KEY": "phc_sKyaJnbiy7oxAhkEQhSx3icNYrCWH9U8mkfEL5Hhp3hf",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://fitwise-be.onrender.com/api",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "google_ios_client_id",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID": "google_android_client_id",
+        "EXPO_PUBLIC_REVENUECAT_API_KEY_IOS": "your_revenuecat_ios_key",
+        "EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID": "your_revenuecat_android_key",
+        "EXPO_PUBLIC_POSTHOG_API_KEY": "phc_sKyaJnbiy7oxAhkEQhSx3icNYrCWH9U8mkfEL5Hhp3hf",
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
