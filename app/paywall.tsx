@@ -67,37 +67,8 @@ export default function PaywallScreen() {
           Alert.alert('Error', 'Purchase could not be completed.');
         }
       } else {
-        // Fallback: Developer / Sandbox simulated upgrade
-        Alert.alert(
-          'Developer Sandbox Mode',
-          `No active RevenueCat offerings configured. Would you like to simulate a ${selectedPlan.toUpperCase()} upgrade?`,
-          [
-            { 
-              text: 'Cancel', 
-              style: 'cancel',
-              onPress: () => {
-                trackEvent('subscription_purchase_failed', { plan: selectedPlan, reason: 'sandbox cancelled' });
-              }
-            },
-            {
-              text: 'Simulate Upgrade',
-              onPress: async () => {
-                try {
-                  const res = await api.post('/subscription/dev-upgrade', { tier: selectedPlan });
-                  if (res.data.success) {
-                    await refreshSubscription();
-                    trackEvent('subscription_purchase_success', { plan: selectedPlan, method: 'dev_upgrade' });
-                    Alert.alert('Success', `Account upgraded to ${selectedPlan} (Simulated)`);
-                    router.back();
-                  }
-                } catch (err) {
-                  trackEvent('subscription_purchase_failed', { plan: selectedPlan, reason: 'dev_upgrade_failed' });
-                  Alert.alert('Error', 'Failed to simulate upgrade.');
-                }
-              },
-            },
-          ]
-        );
+        trackEvent('subscription_purchase_failed', { plan: selectedPlan, reason: 'offering not found' });
+        Alert.alert('Error', 'This subscription option is currently unavailable. Please try again later.');
       }
     } catch (error: any) {
       console.error('Subscription error:', error);
