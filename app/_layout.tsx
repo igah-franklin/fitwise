@@ -6,7 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold } from '@expo-google-fonts/inter';
 import { ThemeProvider, useTheme } from '@/lib/theme';
 import { hydrateProfile, useProfile, isProfileHydrated } from '@/lib/profile';
-import { hydrateWardrobe } from '@/lib/wardrobe';
+import { hydrateWardrobe, useWardrobe, isWardrobeHydrated } from '@/lib/wardrobe';
 import { hydrateOutfits } from '@/lib/outfits';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { SubscriptionProvider } from '@/lib/subscription';
@@ -22,7 +22,7 @@ interface OnboardingContextType {
 
 const OnboardingContext = createContext<OnboardingContextType>({
   isOnboarded: null,
-  setIsOnboarded: () => {},
+  setIsOnboarded: () => { },
 });
 
 export const useOnboarded = () => useContext(OnboardingContext);
@@ -80,11 +80,10 @@ function RootApp() {
 function AuthGuard({ isOnboarded, themeName, theme }: { isOnboarded: boolean, themeName: string, theme: any }) {
   const { user, isLoading } = useAuth();
   const profile = useProfile();
+  const wardrobe = useWardrobe();
   // Read hydration state during render so it's part of the effect deps below.
-  // Without this, a brand-new user whose profile hydrates to `null` would never
-  // re-run the redirect effect (the `profile` reference stays null), letting
-  // them reach the tabs without completing setup.
   const profileHydrated = isProfileHydrated();
+  const wardrobeHydrated = isWardrobeHydrated();
   const segments = useSegments();
   const router = useRouter();
 
@@ -92,6 +91,17 @@ function AuthGuard({ isOnboarded, themeName, theme }: { isOnboarded: boolean, th
     if (isLoading) return;
 
     const current = segments[0];
+    const hasItems = wardrobe && wardrobe.length > 0;
+
+    console.log('[AuthGuard] State Evaluation:', {
+      user: user ? user.email : null,
+      current,
+      profileHydrated,
+      wardrobeHydrated,
+      completedAt: profile?.completedAt,
+      wardrobeLength: wardrobe?.length,
+      hasItems
+    });
 
     // 1. Force onboarding for first-time users
     if (!isOnboarded) {
@@ -109,22 +119,22 @@ function AuthGuard({ isOnboarded, themeName, theme }: { isOnboarded: boolean, th
       return;
     }
 
-    // 3. Signed in — wait for profile hydration before deciding
-    if (!profileHydrated) return;
+    // 3. Signed in — wait for profile and wardrobe hydration before deciding
+    if (!profileHydrated || !wardrobeHydrated) return;
 
-    // 4. Profile not completed → send to setup
-    if (!profile?.completedAt) {
+    // 4. Profile not completed AND user has no wardrobe items → send to setup
+    if (!profile?.completedAt && !hasItems) {
       if (current !== 'setup') {
         router.replace('/setup');
       }
       return;
     }
 
-    // 5. Profile complete — kick out of auth/onboarding/root-index only
+    // 5. Profile complete or has items — kick out of auth/onboarding/root-index only
     if (current === '(auth)' || current === 'onboarding' || !current) {
       router.replace('/(tabs)');
     }
-  }, [user, isLoading, segments, isOnboarded, profile, profileHydrated]);
+  }, [user, isLoading, segments, isOnboarded, profile, profileHydrated, wardrobe, wardrobeHydrated]);
 
   if (isLoading) return null;
 

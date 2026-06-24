@@ -162,24 +162,37 @@ export default function OnboardingScreen() {
           <View style={styles.heroSection}>
             <View style={[styles.heroHalo, { borderColor: `${slide.accentSolid}47` }]}>
               <View style={[styles.heroHaloInner, { backgroundColor: `${slide.accentSolid}21` }]}>
-                <Svg width={80} height={80} viewBox="0 0 80 80">
+                <Svg width={80} height={80} viewBox="0 0 24 24">
                   {index === 0 && (
-                    <Path
-                      d="M40 10L45 25L60 25L48 35L53 50L40 42L27 50L32 35L20 25L35 25L40 10Z"
-                      fill={slide.accentSolid}
-                    />
+                    <>
+                      {/* Clothes Hanger */}
+                      <Path d="M12 2a3 3 0 0 0-3 3c0 .8.6 1.5 1.4 1.8L12 7.4V9" stroke={slide.accentSolid} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                      <Path d="M2 17h20L12 9 2 17z" stroke={slide.accentSolid} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                      <Path d="M4 17h16" stroke={slide.accentSolid} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                      <Path d="M19 6l1 1-1 1-1-1 1-1z" fill={slide.accentSolid} />
+                      <Path d="M5 8l0.5 0.5-0.5 0.5-0.5-0.5 0.5-0.5z" fill={slide.accentSolid} />
+                    </>
                   )}
                   {index === 1 && (
-                    <Path
-                      d="M25 40C25 31.2 32.2 24 41 24H56C57.1 24 58 24.9 58 26V41C58 49.8 50.8 57 42 57H27C25.9 57 25 56.1 25 55V40ZM35 35V45H45V35H35Z"
-                      fill={slide.accentSolid}
-                    />
+                    <>
+                      {/* Two Overlapping Cards */}
+                      <Path d="M5 9a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9z" stroke={slide.accentSolid} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.4} />
+                      <Path d="M9 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H11a2 2 0 0 1-2-2V5z" stroke={slide.accentSolid} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                      <Path d="M13 8h4l1 2v2a1.5 1.5 0 0 1-3 0v-1h-1v1a1.5 1.5 0 0 1-3 0V10l1-2z" stroke={slide.accentSolid} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                      <Path d="M3 4h2v2H3V4z" fill={slide.accentSolid} />
+                      <Path d="M4 9l1 1-1 1-1-1 1-1z" fill={slide.accentSolid} />
+                    </>
                   )}
                   {index === 2 && (
-                    <Path
-                      d="M20 50L25 40L35 45L45 35L55 40L60 50L50 55L40 60L30 55L20 50ZM40 45C43.3 45 46 47.7 46 51S43.3 57 40 57S34 54.3 34 51S36.7 45 40 45Z"
-                      fill={slide.accentSolid}
-                    />
+                    <>
+                      {/* Collar, Bowtie & Star Check */}
+                      <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke={slide.accentSolid} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.3} />
+                      <Path d="M9 11l2 2 4-4" stroke={slide.accentSolid} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                      <Path d="M4 4h16l-4 6H8L4 4z" stroke={slide.accentSolid} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                      <Path d="M9 13.5l-3-1.5v3l3-1.5z" fill={slide.accentSolid} />
+                      <Path d="M15 13.5l3-1.5v3l3-1.5z" fill={slide.accentSolid} />
+                      <Path d="M12 12h0.1" stroke={slide.accentSolid} strokeWidth={3} strokeLinecap="round" />
+                    </>
                   )}
                 </Svg>
               </View>

@@ -11,7 +11,7 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://fitwise-be.onrender.com/api",
+        "EXPO_PUBLIC_API_URL": "https://overargumentative-kristy-billety.ngrok-free.dev/api",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "google_ios_client_id",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID": "google_android_client_id",
         "EXPO_PUBLIC_REVENUECAT_API_KEY_IOS": "appl_KrSmnSQtgZgJkFgXuKHFaGOyYfC",
@@ -23,7 +23,7 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://fitwise-be.onrender.com/api",
+        "EXPO_PUBLIC_API_URL": "https://overargumentative-kristy-billety.ngrok-free.dev/api",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS": "google_ios_client_id",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID": "google_android_client_id",
         "EXPO_PUBLIC_REVENUECAT_API_KEY_IOS": "appl_KrSmnSQtgZgJkFgXuKHFaGOyYfC",

@@ -51,7 +51,9 @@
         {
           "photosPermission": "Allow WearThis to access your photos to select a selfie for generated outfits."
         }
-      ]
+      ],
+      "expo-router",
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {

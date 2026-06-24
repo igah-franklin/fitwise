@@ -47,11 +47,13 @@ export default function PaywallScreen() {
     setIsSubmitting(true);
     trackEvent('subscription_purchase_initiated', { plan: selectedPlan });
     try {
-      // Find RevenueCat package
+      // Find RevenueCat package from current offering or fallback to 'subscriptions' identifier
       let packageToPurchase = null;
-      if (offerings?.current) {
+      const activeOffering = offerings?.current || offerings?.all?.['subscriptions'];
+
+      if (activeOffering) {
         const packageId = selectedPlan === 'pro' ? 'pro_monthly' : 'premium_monthly';
-        packageToPurchase = offerings.current.availablePackages.find(
+        packageToPurchase = activeOffering.availablePackages.find(
           (pkg: any) => pkg.identifier === packageId || pkg.product.identifier.includes(selectedPlan)
         );
       }

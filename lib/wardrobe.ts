@@ -24,6 +24,7 @@ import api from './api';
 
 let wardrobe: WardrobeItem[] = [];
 let hydrated = false;
+let hydrationPromise: Promise<WardrobeItem[]> | null = null;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
@@ -38,21 +39,39 @@ async function persist() {
   }
 }
 
-export async function hydrateWardrobe(): Promise<WardrobeItem[]> {
+export async function hydrateWardrobe(retryCount = 0): Promise<WardrobeItem[]> {
   if (hydrated) return wardrobe;
-  try {
-    const res = await api.get('/style/wardrobe');
-    if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-      wardrobe = res.data;
-    } else {
+  if (hydrationPromise) return hydrationPromise;
+
+  hydrationPromise = (async () => {
+    try {
+      console.log(`[Wardrobe Cache] Fetching user wardrobe (attempt ${retryCount + 1})...`);
+      const res = await api.get('/style/wardrobe');
+      if (res.data && Array.isArray(res.data)) {
+        wardrobe = res.data;
+        hydrated = true;
+      } else {
+        wardrobe = [];
+        hydrated = true;
+      }
+    } catch (error: any) {
+      console.error('[Wardrobe Cache] Failed to hydrate:', error?.response?.status, error?.message || error);
+      if (retryCount < 3) {
+        console.log(`[Wardrobe Cache] Retrying hydration in 1.5s... (Attempt ${retryCount + 1}/3)`);
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        hydrationPromise = null; // Clear so the recursive call starts a new request
+        return hydrateWardrobe(retryCount + 1);
+      }
       wardrobe = [];
+      hydrated = true; // Fallback to true after retries fail to prevent infinite splash loading
+    } finally {
+      hydrationPromise = null;
+      emit();
     }
-  } catch {
-    wardrobe = [];
-  }
-  hydrated = true;
-  emit();
-  return wardrobe;
+    return wardrobe;
+  })();
+
+  return hydrationPromise;
 }
 
 export function getWardrobe(): WardrobeItem[] {
@@ -61,6 +80,10 @@ export function getWardrobe(): WardrobeItem[] {
 
 export function hasWardrobe(): boolean {
   return wardrobe.length > 0;
+}
+
+export function isWardrobeHydrated(): boolean {
+  return hydrated;
 }
 
 /**
@@ -102,6 +125,7 @@ export async function buildWardrobe(opts: {
 export async function clearWardrobe(): Promise<void> {
   wardrobe = [];
   hydrated = false;
+  hydrationPromise = null;
   emit();
 }
 
