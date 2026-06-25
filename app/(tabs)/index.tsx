@@ -57,12 +57,15 @@ export default function HomeScreen() {
           {/* Header */}
           <View style={styles.header}>
             <View>
-              <Text style={styles.greeting}>Good morning,</Text>
+              <Text style={styles.greeting}>Welcome,</Text>
               <Text style={styles.userName}>Style Champion</Text>
             </View>
             <View style={styles.headerRight}>
-              <PressScale style={styles.notificationButton}>
-                <Ionicons name="notifications-outline" size={24} color={theme.text} />
+              <PressScale 
+                style={styles.premiumButton}
+                onPress={() => router.push('/paywall')}
+              >
+                <Ionicons name="diamond-outline" size={22} color={theme.primary} />
               </PressScale>
             </View>
           </View>
@@ -230,7 +233,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     gap: Layout.spacing.md,
   },
-  notificationButton: {
+  premiumButton: {
     width: 44,
     height: 44,
     borderRadius: Layout.borderRadius.full,
