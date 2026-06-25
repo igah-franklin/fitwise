@@ -114,7 +114,7 @@ export default function OutfitDetailsScreen() {
     const icon = CATEGORY_ICON[w.category] ?? 'pricetag-outline';
 
     return (
-      <PressScale key={item.id || (item as any)._id || w.id || (w as any)._id} style={styles.itemRow}>
+      <View key={item.id || (item as any)._id || w.id || (w as any)._id} style={styles.itemRow}>
         <View style={styles.itemIcon}>
           <Ionicons name={icon as any} size={22} color={theme.primary} />
         </View>
@@ -133,9 +133,8 @@ export default function OutfitDetailsScreen() {
         </View>
         <View style={styles.itemBudgetWrap}>
           <Text style={styles.itemBudget}>{w.budgetRange}</Text>
-          <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
         </View>
-      </PressScale>
+      </View>
     );
   };
 
@@ -475,10 +474,16 @@ const makeStyles = (theme: any) => StyleSheet.create({
     alignItems: 'center',
     gap: Layout.spacing.md,
     backgroundColor: theme.surface,
-    borderRadius: Layout.borderRadius.md,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: theme.border,
     padding: Layout.spacing.md,
+    // Add subtle shadow for premium look
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
   itemIcon: {
     width: 44,
@@ -527,8 +532,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
   },
   itemBudgetWrap: {
     alignItems: 'flex-end',
-    flexDirection: 'row',
-    gap: 2,
+    justifyContent: 'center',
   },
   itemBudget: {
     fontSize: 13,

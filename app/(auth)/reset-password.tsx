@@ -27,7 +27,7 @@ export default function ResetPasswordScreen() {
       setIsLoading(true);
       setError('');
       await api.post('/auth/reset-password', { email, code, newPassword });
-      
+
       Alert.alert('Success', 'Your password has been reset successfully. Please log in.', [
         { text: 'OK', onPress: () => router.replace('/(auth)/login') }
       ]);
@@ -46,34 +46,34 @@ export default function ResetPasswordScreen() {
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <Input 
-          label="Verification Code" 
-          placeholder="123456" 
-          keyboardType="number-pad" 
+        <Input
+          label="Verification Code"
+          placeholder="123456"
+          keyboardType="number-pad"
           maxLength={6}
-          value={code} 
-          onChangeText={setCode} 
+          value={code}
+          onChangeText={setCode}
         />
-        <Input 
-          label="New Password" 
-          placeholder="••••••••" 
+        <Input
+          label="New Password"
+          placeholder="••••••••"
           secureTextEntry
-          value={newPassword} 
-          onChangeText={setNewPassword} 
+          value={newPassword}
+          onChangeText={setNewPassword}
           style={styles.inputSpacing}
         />
 
-        <Button 
-          title="Reset Password" 
-          variant="primary" 
-          style={styles.actionButton} 
+        <Button
+          title="Reset Password"
+          variant="primary"
+          style={styles.actionButton}
           onPress={handleResetPassword}
           disabled={isLoading}
         />
-        <Button 
-          title="Back to Login" 
-          variant="ghost" 
-          style={styles.backButton} 
+        <Button
+          title="Back to Login"
+          variant="ghost"
+          style={styles.backButton}
           onPress={() => router.replace('/(auth)/login')}
         />
       </View>

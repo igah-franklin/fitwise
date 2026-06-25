@@ -6,6 +6,7 @@
 // wardrobe so what users are told to wear matches what they're told to buy.
 
 import { useEffect, useReducer } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {
   BudgetRange,
@@ -45,6 +46,11 @@ export async function hydrateWardrobe(retryCount = 0): Promise<WardrobeItem[]> {
 
   hydrationPromise = (async () => {
     try {
+      const token = await SecureStore.getItemAsync('token');
+      if (!token) {
+        return [];
+      }
+
       console.log(`[Wardrobe Cache] Fetching user wardrobe (attempt ${retryCount + 1})...`);
       const res = await api.get('/style/wardrobe');
       if (res.data && Array.isArray(res.data)) {

@@ -6,6 +6,7 @@
 // to by `generateOutfit`.
 
 import type { Outfit, OutfitItem, OutfitOccasion } from './types';
+import * as SecureStore from 'expo-secure-store';
 import { getWardrobe } from './wardrobe';
 import { getProfile } from './profile';
 import { trackEvent } from './posthog';
@@ -42,6 +43,11 @@ export async function hydrateOutfits(retryCount = 0): Promise<Outfit[]> {
 
   hydrationPromise = (async () => {
     try {
+      const token = await SecureStore.getItemAsync('token');
+      if (!token) {
+        return [];
+      }
+
       console.log(`[Outfits Cache] Fetching outfits (attempt ${retryCount + 1})...`);
       const res = await api.get('/style/outfits');
       if (res.data && Array.isArray(res.data)) {

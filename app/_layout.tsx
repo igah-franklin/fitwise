@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { LogBox } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -12,6 +13,8 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { SubscriptionProvider } from '@/lib/subscription';
 import { PostHogProvider } from 'posthog-react-native';
 import { posthog } from '@/lib/posthog';
+
+LogBox.ignoreAllLogs();
 
 SplashScreen.preventAutoHideAsync();
 

@@ -24,7 +24,7 @@ export default function ForgotPasswordScreen() {
       setIsLoading(true);
       setError('');
       await api.post('/auth/forgot-password', { email });
-      
+
       router.push({
         pathname: '/(auth)/reset-password',
         params: { email }
@@ -38,7 +38,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <Screen>
-      <Pressable 
+      <Pressable
         onPress={() => router.back()}
         style={({ pressed }) => [
           styles.backCircleButton,
@@ -54,25 +54,25 @@ export default function ForgotPasswordScreen() {
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <Input 
-          label="Email" 
-          placeholder="you@example.com" 
-          keyboardType="email-address" 
-          value={email} 
-          onChangeText={setEmail} 
+        <Input
+          label="Email"
+          placeholder="you@example.com"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
         />
 
-        <Button 
-          title="Send Code" 
-          variant="primary" 
-          style={styles.actionButton} 
+        <Button
+          title="Send Code"
+          variant="primary"
+          style={styles.actionButton}
           onPress={handleSendResetCode}
           disabled={isLoading}
         />
 
         <View style={styles.loginFooterContainer}>
           <Text style={styles.loginFooterText}>Remember your password?</Text>
-          <Pressable 
+          <Pressable
             onPress={() => router.back()}
             style={({ pressed }) => [
               styles.loginFooterButton,

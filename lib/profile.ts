@@ -5,6 +5,7 @@
 // hook for reactive UI.
 
 import { useEffect, useReducer } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import type { BudgetRange, StyleType } from './types';
 
 const STORAGE_KEY = 'user_style_profile';
@@ -70,6 +71,11 @@ export async function hydrateProfile(retryCount = 0): Promise<UserProfile | null
 
   hydrationPromise = (async () => {
     try {
+      const token = await SecureStore.getItemAsync('token');
+      if (!token) {
+        return null;
+      }
+
       console.log(`[Profile Cache] Fetching user profile (attempt ${retryCount + 1})...`);
       const res = await api.get('/style/profile');
       if (res.data) {
