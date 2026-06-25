@@ -93,10 +93,24 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     try {
       const currentOfferings = await Purchases.getOfferings();
       setOfferings(currentOfferings);
-    } catch (error) {
+
+      // Send debug log to backend
+      api.post('/debug-log', {
+        offerings: currentOfferings,
+        platform: Platform.OS,
+        userId: user?._id || 'anonymous',
+      }).catch((err) => console.warn('Failed to send debug log to backend:', err));
+    } catch (error: any) {
       console.warn('Failed to fetch RevenueCat offerings:', error);
+
+      // Send error debug log to backend
+      api.post('/debug-log', {
+        error: error?.message || String(error),
+        platform: Platform.OS,
+        userId: user?._id || 'anonymous',
+      }).catch((err) => console.warn('Failed to send debug log to backend:', err));
     }
-  }, []);
+  }, [user]);
 
   const refreshSubscription = useCallback(async () => {
     setIsLoading(true);
@@ -149,7 +163,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
     try {
       const purchaseResult = await Purchases.purchasePackage(pkg);
+      // console.log(purchaseResult, 'purchaseResult')
       const activeEntitlements = Object.keys(purchaseResult.customerInfo?.entitlements?.active || {});
+      // console.log(activeEntitlements, 'activeEntitlements')
       if (activeEntitlements.length > 0) {
         // Refresh subscription after purchase (polls backend status)
         await refreshSubscription();

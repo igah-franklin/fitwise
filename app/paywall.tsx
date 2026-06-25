@@ -49,7 +49,12 @@ export default function PaywallScreen() {
     try {
       // Find RevenueCat package from current offering or fallback to 'subscriptions' identifier
       let packageToPurchase = null;
-      const activeOffering = offerings?.current || offerings?.all?.['subscriptions'];
+      //const activeOffering = offerings?.current || offerings?.all?.['subscriptions'];
+      const activeOffering = offerings?.current || offerings?.all?.['subscriptions'] || Object.values(offerings?.all || {})[0];
+      console.log(offerings?.current, 'current')
+      console.log(activeOffering, 'activeOffering')
+      console.log(selectedPlan, 'selectedPlan')
+
 
       if (activeOffering) {
         const packageId = selectedPlan === 'pro' ? 'pro_monthly' : 'premium_monthly';
@@ -57,6 +62,8 @@ export default function PaywallScreen() {
           (pkg: any) => pkg.identifier === packageId || pkg.product.identifier.includes(selectedPlan)
         );
       }
+
+      console.log(packageToPurchase, 'packageToPurchase')
 
       if (packageToPurchase) {
         const success = await purchasePackage(packageToPurchase);
