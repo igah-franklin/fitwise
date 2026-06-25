@@ -15,6 +15,7 @@ import { Layout } from '@/constants/Layout';
 import { useWardrobe, markAsOwned, swapItem, removeWardrobeItem } from '@/lib/wardrobe';
 import type { WardrobeItem, ClothingCategory } from '@/lib/types';
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal';
+import { ConfirmSwapModal } from '@/components/ui/ConfirmSwapModal';
 import { GeneratingWardrobeScreen } from '@/components/GeneratingScreen';
 import { UsageIndicator } from '@/components/UsageIndicator';
 import { useSubscription } from '@/lib/subscription';
@@ -72,8 +73,11 @@ export default function WardrobeScreen() {
   const [rebuilding, setRebuilding] = useState(false);
   const wardrobeItems = useWardrobe();
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
+  const [swapItemId, setSwapItemId] = useState<string | null>(null);
+  const [isSwapping, setIsSwapping] = useState(false);
 
   const itemToDelete = wardrobeItems?.find(item => ((item as any)._id || item.id) === deleteItemId);
+  const itemToSwap = wardrobeItems?.find(item => ((item as any)._id || item.id) === swapItemId);
 
   const confirmRemoveItem = () => {
     if (deleteItemId) {
@@ -91,8 +95,10 @@ export default function WardrobeScreen() {
   };
 
   const handleSwapItem = async (id: string) => {
+    setIsSwapping(true);
     try {
       await swapItem(id);
+      setSwapItemId(null);
     } catch (error: any) {
       const errMsg = (error.message || '').toLowerCase();
       if (errMsg.includes('limit') || errMsg.includes('exceeded') || errMsg.includes('403')) {
@@ -101,7 +107,10 @@ export default function WardrobeScreen() {
           'You have reached your limit of wardrobe item generations for this month. Upgrade to Pro or Premium to generate more items!',
           [
             { text: 'Cancel', style: 'cancel' },
-            { text: 'Upgrade Now', onPress: () => router.push('/paywall') }
+            { text: 'Upgrade Now', onPress: () => {
+              setSwapItemId(null);
+              router.push('/paywall');
+            }}
           ]
         );
       } else if (errMsg.match(/quota|429|503|demand|unavailable|busy|temporary/)) {
@@ -112,6 +121,8 @@ export default function WardrobeScreen() {
       } else {
         Alert.alert('Error', error.message || 'Failed to swap item.');
       }
+    } finally {
+      setIsSwapping(false);
     }
   };
 
@@ -181,7 +192,7 @@ export default function WardrobeScreen() {
             <Text style={styles.actionButtonText}>Own it</Text>
           </PressScale>
         )}
-        <PressScale onPress={() => handleSwapItem((item as any)._id || item.id)} style={styles.actionButtonSecondary}>
+        <PressScale onPress={() => setSwapItemId((item as any)._id || item.id)} style={styles.actionButtonSecondary}>
           <Text style={styles.actionButtonTextSecondary}>Swap</Text>
         </PressScale>
       </View>
@@ -319,7 +330,7 @@ export default function WardrobeScreen() {
               </SlideUp>
 
               {/* Regenerate Wardrobe Button */}
-              <SlideUp>
+              {/* <SlideUp>
                 <Button
                   title={rebuilding ? 'Regenerating…' : 'Regenerate Wardrobe'}
                   variant="primary"
@@ -328,7 +339,7 @@ export default function WardrobeScreen() {
                   icon={<Ionicons name="sparkles" size={18} color={theme.onPrimary} />}
                   style={styles.generateButton}
                 />
-              </SlideUp>
+              </SlideUp> */}
             </Stagger>
           )}
         </View>
@@ -341,6 +352,20 @@ export default function WardrobeScreen() {
         itemName={itemToDelete?.name}
         onConfirm={confirmRemoveItem}
         onCancel={() => setDeleteItemId(null)}
+      />
+
+      <ConfirmSwapModal
+        visible={!!swapItemId}
+        title="Swap Wardrobe Item?"
+        message="Are you sure you want to regenerate and replace this item? This will generate a new suggestion tailored to your style preferences."
+        itemName={itemToSwap?.name}
+        onConfirm={() => {
+          if (swapItemId) {
+            handleSwapItem(swapItemId);
+          }
+        }}
+        onCancel={() => setSwapItemId(null)}
+        isSwapping={isSwapping}
       />
     </Screen>
   );

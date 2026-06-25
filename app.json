@@ -18,7 +18,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.approom.wearthis",
+      "bundleIdentifier": "com.vanettesplaceglobal.wearthis",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -28,7 +28,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#6366F1"
       },
-      "package": "com.approom.wearthis",
+      "package": "com.vanettesplaceglobal.wearthis",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"

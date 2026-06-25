@@ -39,7 +39,7 @@ export default function HomeScreen() {
   );
 
   const ownedItems = wardrobe.filter((i) => i.status === 'owned' || i.status === 'purchased').length;
-  
+
   const handleGenerateWardrobe = () => {
     // Walk the user through the steps (measurements, style, budget,
     // photos) so they can generate/refresh their wardrobe.
@@ -83,7 +83,7 @@ export default function HomeScreen() {
                     </Text>
                   </View>
                   <View style={styles.heroIcon}>
-                    <Ionicons name="sparkles" size={32} color={theme.onPrimary} />
+                    <Ionicons name="woman-outline" size={32} color={theme.onPrimary} />
                   </View>
                 </View>
                 <Button
@@ -105,7 +105,7 @@ export default function HomeScreen() {
                   </View>
                   <Text style={styles.statLabel}>Wardrobe Items</Text>
                 </Card>
-                
+
                 <Card style={[styles.statCard, { width: cardWidth }]} padding="md">
                   <View style={styles.statHeader}>
                     <Ionicons name="checkmark-circle-outline" size={20} color={theme.success} />
@@ -160,8 +160,8 @@ export default function HomeScreen() {
                 recentOutfits.map((outfit) => {
                   const pieces = outfit.items.slice(0, 2); // get up to two pieces for thumbnails
                   return (
-                    <PressScale 
-                      key={outfit.id} 
+                    <PressScale
+                      key={outfit.id}
                       style={styles.recentActivityCard}
                       onPress={() => router.push(`/outfit/${outfit.id}`)}
                     >

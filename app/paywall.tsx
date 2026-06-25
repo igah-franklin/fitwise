@@ -170,7 +170,7 @@ export default function PaywallScreen() {
                 <Text variant="caption" style={{ color: theme.textMuted }}>Best for starters</Text>
               </View>
               <View style={styles.priceContainer}>
-                <Text variant="h2" style={styles.price}>$9.99</Text>
+                <Text variant="h2" style={styles.price}>$19.99</Text>
                 <Text variant="caption" style={styles.priceDuration}>/mo</Text>
               </View>
             </View>
@@ -202,7 +202,7 @@ export default function PaywallScreen() {
               </View>
               <View style={styles.priceContainer}>
                 <Text variant="h2" style={[styles.price, { color: theme.accent }]}>$49.99</Text>
-                <Text variant="caption" style={styles.priceDuration}>/mo</Text>
+                <Text variant="caption" style={styles.priceDuration}>/yr</Text>
               </View>
             </View>
           </Pressable>
