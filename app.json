@@ -1,16 +1,17 @@
 {
   "expo": {
+    "scheme": "wearthis",
     "name": "WearThis",
     "slug": "wearthis",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#6366F1"
+      "backgroundColor": "#02033b"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -50,11 +51,13 @@
         {
           "photosPermission": "Allow WearThis to access your photos to select a selfie for generated outfits."
         }
-      ]
+      ],
+      "expo-router",
+      "expo-web-browser"
     ],
     "extra": {
       "eas": {
-        "projectId": "69ff1470-4fda-4f8c-bdee-21ad2dfa7f93"
+        "projectId": "5b1399d5-2763-4672-841f-31c72e66273f"
       }
     }
   }

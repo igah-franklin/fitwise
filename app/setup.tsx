@@ -29,7 +29,6 @@ import {
   emptyProfile,
   STYLE_OPTIONS,
   BUDGET_OPTIONS,
-  COMMON_BASICS,
   type Measurements,
   type ProfilePhotos,
   type UserProfile,
@@ -40,7 +39,7 @@ import type { BudgetRange, StyleType } from '@/lib/types';
 import { trackEvent } from '@/lib/posthog';
 
 const STEPS = [
-  { title: 'Welcome to WearThis', subtitle: "Before we curate your wardrobe, let's understand you better. Here is why we need a few details:" },
+  { title: 'Set up for the perfect wardrobe', subtitle: "Before we curate your wardrobe, let's understand you better. Here is why we need a few details:" },
   { title: 'Your Measurements', subtitle: 'So every recommendation fits you exactly.' },
   { title: 'Your Style', subtitle: 'Pick the looks you want to live in.' },
   { title: 'Your Budget', subtitle: 'We tailor prices and brands to your range.' },
@@ -265,7 +264,7 @@ export default function SetupScreen() {
           {step === 0 && (
             <Animated.View entering={FadeIn.duration(400)} style={styles.introContainer}>
               <View style={styles.introIconContainer}>
-                <Ionicons name="sparkles" size={48} color={theme.primary} />
+                <Ionicons name="woman-outline" size={48} color={theme.primary} />
               </View>
               <Text style={styles.introHeadline}>{STEPS[step].title}</Text>
               <Text style={styles.introBody}>{STEPS[step].subtitle}</Text>

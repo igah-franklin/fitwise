@@ -87,7 +87,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
   },
   container: {
     width: '100%',
-    backgroundColor: theme.card,
+    backgroundColor: theme.surface ?? '#FFFFFF',
     borderRadius: Layout.borderRadius.xl,
     padding: Layout.spacing.xl,
     alignItems: 'center',

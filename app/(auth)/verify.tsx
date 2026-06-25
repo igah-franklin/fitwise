@@ -12,7 +12,7 @@ export default function VerifyScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { signIn } = useAuth();
-  
+
   const email = (params.email as string) || '';
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
@@ -22,7 +22,7 @@ export default function VerifyScreen() {
   const handleCodeChange = (text: string, index: number) => {
     // Only take the first character (if user pastes a string, we might want to handle it differently, but for now we'll just handle single key presses)
     const newCode = [...code];
-    
+
     if (text.length > 1) {
       // Handle paste
       const pastedCode = text.slice(0, 6).split('');
@@ -35,7 +35,7 @@ export default function VerifyScreen() {
       // Handle single input
       newCode[index] = text;
       setCode(newCode);
-      
+
       if (text && index < 5) {
         inputRefs.current[index + 1]?.focus();
       }
@@ -107,24 +107,24 @@ export default function VerifyScreen() {
           ))}
         </View>
 
-        <Button 
-          title="Verify" 
-          variant="primary" 
-          style={styles.actionButton} 
+        <Button
+          title="Verify"
+          variant="primary"
+          style={styles.actionButton}
           onPress={handleVerify}
           disabled={isLoading}
         />
-        <Button 
-          title="Resend Code" 
-          variant="ghost" 
-          style={styles.backButton} 
+        <Button
+          title="Resend Code"
+          variant="ghost"
+          style={styles.backButton}
           onPress={handleResend}
           disabled={isLoading}
         />
-        <Button 
-          title="Back to Login" 
-          variant="ghost" 
-          style={styles.backButton} 
+        <Button
+          title="Back to Login"
+          variant="ghost"
+          style={styles.backButton}
           onPress={() => router.replace('/(auth)/login')}
         />
       </View>

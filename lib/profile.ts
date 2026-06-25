@@ -5,6 +5,7 @@
 // hook for reactive UI.
 
 import { useEffect, useReducer } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import type { BudgetRange, StyleType } from './types';
 
 const STORAGE_KEY = 'user_style_profile';
@@ -56,6 +57,7 @@ import api from './api';
 
 let cached: UserProfile | null = null;
 let hydrated = false;
+let hydrationPromise: Promise<UserProfile | null> | null = null;
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -63,21 +65,44 @@ function emit() {
 }
 
 /** Load the profile from the backend into the in-memory cache. */
-export async function hydrateProfile(): Promise<UserProfile | null> {
+export async function hydrateProfile(retryCount = 0): Promise<UserProfile | null> {
   if (hydrated) return cached;
-  try {
-    const res = await api.get('/style/profile');
-    if (res.data) {
-      cached = res.data;
-    } else {
+  if (hydrationPromise) return hydrationPromise;
+
+  hydrationPromise = (async () => {
+    try {
+      const token = await SecureStore.getItemAsync('token');
+      if (!token) {
+        return null;
+      }
+
+      console.log(`[Profile Cache] Fetching user profile (attempt ${retryCount + 1})...`);
+      const res = await api.get('/style/profile');
+      if (res.data) {
+        cached = res.data;
+        hydrated = true;
+      } else {
+        cached = null;
+        hydrated = true;
+      }
+    } catch (error: any) {
+      console.error('[Profile Cache] Failed to hydrate:', error?.response?.status, error?.message || error);
+      if (retryCount < 3) {
+        console.log(`[Profile Cache] Retrying hydration in 1.5s... (Attempt ${retryCount + 1}/3)`);
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        hydrationPromise = null; // Clear so the recursive call starts a new request
+        return hydrateProfile(retryCount + 1);
+      }
       cached = null;
+      hydrated = true; // Fallback to true after retries fail to prevent infinite splash loading
+    } finally {
+      hydrationPromise = null;
+      emit();
     }
-  } catch {
-    cached = null;
-  }
-  hydrated = true;
-  emit();
-  return cached;
+    return cached;
+  })();
+
+  return hydrationPromise;
 }
 
 export function getProfile(): UserProfile | null {
@@ -112,6 +137,7 @@ export async function updateProfile(updates: Partial<UserProfile>): Promise<void
 export async function clearProfile(): Promise<void> {
   cached = null;
   hydrated = false;
+  hydrationPromise = null;
   emit();
 }
 

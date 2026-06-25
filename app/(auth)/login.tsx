@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable, Image } from 'react-native';
 import { Screen } from '@/components/ui/Screen';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -37,7 +37,7 @@ export default function LoginScreen() {
 
   const handleGoogleSignIn = async (code: string) => {
     try {
-      const res = await api.post('/auth/google', { 
+      const res = await api.post('/auth/google', {
         code,
         redirectUri: request?.redirectUri,
         codeVerifier: request?.codeVerifier,
@@ -59,8 +59,8 @@ export default function LoginScreen() {
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
       });
-      
-      const res = await api.post('/auth/apple', { 
+
+      const res = await api.post('/auth/apple', {
         idToken: credential.identityToken,
         name: credential.fullName?.givenName ? `${credential.fullName.givenName} ${credential.fullName.familyName}` : undefined
       });
@@ -103,6 +103,13 @@ export default function LoginScreen() {
   return (
     <Screen>
       <View style={styles.container}>
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('@/assets/adaptive-icon.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
         <Text style={styles.title}>Welcome back</Text>
         <Text style={styles.subtitle}>Sign in to continue</Text>
 
@@ -112,7 +119,7 @@ export default function LoginScreen() {
         <Input label="Password" placeholder="••••••••" secureTextEntry style={styles.passwordInput} value={password} onChangeText={setPassword} />
 
         <View style={styles.forgotPasswordContainer}>
-          <Pressable 
+          <Pressable
             onPress={() => router.push('/(auth)/forgot-password')}
             style={({ pressed }) => [
               styles.forgotPasswordPressable,
@@ -126,19 +133,19 @@ export default function LoginScreen() {
 
         <Button title="Sign In" variant="primary" style={styles.signInButton} onPress={handleEmailSignIn} loading={isLoading} />
 
-        <View style={styles.divider}>
+        {/* <View style={styles.divider}>
           <View style={styles.line} />
           <Text style={styles.orText}>OR</Text>
           <View style={styles.line} />
         </View>
 
-        <Button 
-          title="Sign in with Google" 
-          variant="outline" 
-          onPress={() => promptAsync()} 
-          style={styles.socialButton} 
+        <Button
+          title="Sign in with Google"
+          variant="outline"
+          onPress={() => promptAsync()}
+          style={styles.socialButton}
         />
-        
+
         {Platform.OS === 'ios' && (
           <AppleAuthentication.AppleAuthenticationButton
             buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
@@ -147,11 +154,11 @@ export default function LoginScreen() {
             style={styles.appleButton}
             onPress={handleAppleSignIn}
           />
-        )}
+        )} */}
 
         <View style={styles.signUpContainer}>
           <Text style={styles.signUpText}>New to WearThis?</Text>
-          <Pressable 
+          <Pressable
             onPress={() => router.push('/(auth)/signup')}
             style={({ pressed }) => [
               styles.signUpButton,
@@ -171,6 +178,15 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
+  },
+  logoContainer: {
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  logo: {
+    width: 90,
+    height: 90,
+    tintColor: Colors.light.primary,
   },
   title: {
     fontSize: 30,

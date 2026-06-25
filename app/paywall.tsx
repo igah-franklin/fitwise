@@ -47,14 +47,23 @@ export default function PaywallScreen() {
     setIsSubmitting(true);
     trackEvent('subscription_purchase_initiated', { plan: selectedPlan });
     try {
-      // Find RevenueCat package
+      // Find RevenueCat package from current offering or fallback to 'subscriptions' identifier
       let packageToPurchase = null;
-      if (offerings?.current) {
+      //const activeOffering = offerings?.current || offerings?.all?.['subscriptions'];
+      const activeOffering = offerings?.current || offerings?.all?.['subscriptions'] || Object.values(offerings?.all || {})[0];
+      console.log(offerings?.current, 'current')
+      console.log(activeOffering, 'activeOffering')
+      console.log(selectedPlan, 'selectedPlan')
+
+
+      if (activeOffering) {
         const packageId = selectedPlan === 'pro' ? 'pro_monthly' : 'premium_monthly';
-        packageToPurchase = offerings.current.availablePackages.find(
+        packageToPurchase = activeOffering.availablePackages.find(
           (pkg: any) => pkg.identifier === packageId || pkg.product.identifier.includes(selectedPlan)
         );
       }
+
+      console.log(packageToPurchase, 'packageToPurchase')
 
       if (packageToPurchase) {
         const success = await purchasePackage(packageToPurchase);
@@ -67,37 +76,8 @@ export default function PaywallScreen() {
           Alert.alert('Error', 'Purchase could not be completed.');
         }
       } else {
-        // Fallback: Developer / Sandbox simulated upgrade
-        Alert.alert(
-          'Developer Sandbox Mode',
-          `No active RevenueCat offerings configured. Would you like to simulate a ${selectedPlan.toUpperCase()} upgrade?`,
-          [
-            { 
-              text: 'Cancel', 
-              style: 'cancel',
-              onPress: () => {
-                trackEvent('subscription_purchase_failed', { plan: selectedPlan, reason: 'sandbox cancelled' });
-              }
-            },
-            {
-              text: 'Simulate Upgrade',
-              onPress: async () => {
-                try {
-                  const res = await api.post('/subscription/dev-upgrade', { tier: selectedPlan });
-                  if (res.data.success) {
-                    await refreshSubscription();
-                    trackEvent('subscription_purchase_success', { plan: selectedPlan, method: 'dev_upgrade' });
-                    Alert.alert('Success', `Account upgraded to ${selectedPlan} (Simulated)`);
-                    router.back();
-                  }
-                } catch (err) {
-                  trackEvent('subscription_purchase_failed', { plan: selectedPlan, reason: 'dev_upgrade_failed' });
-                  Alert.alert('Error', 'Failed to simulate upgrade.');
-                }
-              },
-            },
-          ]
-        );
+        trackEvent('subscription_purchase_failed', { plan: selectedPlan, reason: 'offering not found' });
+        Alert.alert('Error', 'This subscription option is currently unavailable. Please try again later.');
       }
     } catch (error: any) {
       console.error('Subscription error:', error);
@@ -190,7 +170,7 @@ export default function PaywallScreen() {
                 <Text variant="caption" style={{ color: theme.textMuted }}>Best for starters</Text>
               </View>
               <View style={styles.priceContainer}>
-                <Text variant="h2" style={styles.price}>$9.99</Text>
+                <Text variant="h2" style={styles.price}>$19.99</Text>
                 <Text variant="caption" style={styles.priceDuration}>/mo</Text>
               </View>
             </View>
@@ -222,7 +202,7 @@ export default function PaywallScreen() {
               </View>
               <View style={styles.priceContainer}>
                 <Text variant="h2" style={[styles.price, { color: theme.accent }]}>$49.99</Text>
-                <Text variant="caption" style={styles.priceDuration}>/mo</Text>
+                <Text variant="caption" style={styles.priceDuration}>/yr</Text>
               </View>
             </View>
           </Pressable>

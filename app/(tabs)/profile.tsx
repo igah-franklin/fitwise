@@ -230,14 +230,19 @@ export default function ProfileScreen() {
                   title={subscriptionTier === 'premium' ? 'Manage Subscription' : 'Upgrade Plan'}
                   variant={subscriptionTier === 'free' ? 'primary' : 'outline'}
                   onPress={() => router.push('/paywall')}
-                  style={{ marginTop: 14 }}
+                  style={{
+                    marginTop: 14,
+                    borderStyle: 'dashed',
+                    borderWidth: 1.5,
+                    borderColor: subscriptionTier === 'free' ? 'rgba(255, 255, 255, 0.5)' : theme.primary,
+                  }}
                   size="sm"
                 />
               </Card>
             </SlideUp>
 
             {/* App Settings */}
-            <SlideUp>
+            {/* <SlideUp>
               <Text style={styles.sectionHeader}>App Settings</Text>
               <View style={styles.sectionsContainer}>
                 <ProfileSection
@@ -248,7 +253,7 @@ export default function ProfileScreen() {
                   showChevron={false}
                 />
               </View>
-            </SlideUp>
+            </SlideUp> */}
 
             {/* Account Settings */}
             <SlideUp>

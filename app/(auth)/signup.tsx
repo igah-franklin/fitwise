@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen } from '@/components/ui/Screen';
 import { Button } from '@/components/ui/Button';
@@ -49,7 +49,7 @@ export default function SignupScreen() {
 
   return (
     <Screen>
-      <Pressable 
+      <Pressable
         onPress={() => router.back()}
         style={({ pressed }) => [
           styles.backCircleButton,
@@ -60,6 +60,13 @@ export default function SignupScreen() {
       </Pressable>
 
       <View style={styles.container}>
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('@/assets/adaptive-icon.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
         <Text style={styles.title}>Create Account</Text>
         <Text style={styles.subtitle}>Join WearThis today</Text>
 
@@ -99,7 +106,7 @@ export default function SignupScreen() {
 
         <View style={styles.loginFooterContainer}>
           <Text style={styles.loginFooterText}>Already have an account?</Text>
-          <Pressable 
+          <Pressable
             onPress={() => router.back()}
             style={({ pressed }) => [
               styles.loginFooterButton,
@@ -120,6 +127,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 24,
     paddingTop: 40,
+  },
+  logoContainer: {
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  logo: {
+    width: 90,
+    height: 90,
+    tintColor: Colors.light.primary,
   },
   title: {
     fontSize: 30,

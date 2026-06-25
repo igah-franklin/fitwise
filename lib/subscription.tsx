@@ -53,13 +53,32 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [offerings, setOfferings] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch usage stats from backend
-  const fetchUsageSummary = useCallback(async () => {
+  // Fetch usage stats from backend (with optional polling retry if webhook is delayed)
+  const fetchUsageSummary = useCallback(async (retryCount = 0): Promise<void> => {
     if (!user) return;
     try {
       const res = await api.get('/subscription/status');
+      const backendTier = res.data.tier;
+
+      // If we are on native and have active entitlements locally, but the backend still reports 'free',
+      // poll the backend status with a brief delay to wait for the RevenueCat webhook to finish.
+      if (!isWeb && REVENUECAT_API_KEY && !REVENUECAT_API_KEY.includes('your_revenuecat')) {
+        try {
+          const customerInfo = await Purchases.getCustomerInfo();
+          const localActiveEntitlements = Object.keys(customerInfo?.entitlements?.active || {});
+
+          if (localActiveEntitlements.length > 0 && backendTier === 'free' && retryCount < 4) {
+            console.log(`[Subscription] Webhook lag detected (local active entitlements: ${localActiveEntitlements.join(', ')}, backend tier: ${backendTier}). Retrying sync in 1.5s... (Attempt ${retryCount + 1}/4)`);
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+            return fetchUsageSummary(retryCount + 1);
+          }
+        } catch (err) {
+          console.warn('[Subscription] Failed to check local entitlements during sync:', err);
+        }
+      }
+
       setUsage(res.data);
-      setSubscriptionTier(res.data.tier);
+      setSubscriptionTier(backendTier);
     } catch (error) {
       console.warn('Failed to fetch subscription usage from backend:', error);
     }
@@ -74,10 +93,24 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     try {
       const currentOfferings = await Purchases.getOfferings();
       setOfferings(currentOfferings);
-    } catch (error) {
+
+      // Send debug log to backend
+      api.post('/debug-log', {
+        offerings: currentOfferings,
+        platform: Platform.OS,
+        userId: user?._id || 'anonymous',
+      }).catch((err) => console.warn('Failed to send debug log to backend:', err));
+    } catch (error: any) {
       console.warn('Failed to fetch RevenueCat offerings:', error);
+
+      // Send error debug log to backend
+      api.post('/debug-log', {
+        error: error?.message || String(error),
+        platform: Platform.OS,
+        userId: user?._id || 'anonymous',
+      }).catch((err) => console.warn('Failed to send debug log to backend:', err));
     }
-  }, []);
+  }, [user]);
 
   const refreshSubscription = useCallback(async () => {
     setIsLoading(true);
@@ -130,8 +163,11 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
     try {
       const purchaseResult = await Purchases.purchasePackage(pkg);
-      if (purchaseResult.customerInfo?.entitlements?.active) {
-        // Refresh subscription after purchase
+      // console.log(purchaseResult, 'purchaseResult')
+      const activeEntitlements = Object.keys(purchaseResult.customerInfo?.entitlements?.active || {});
+      // console.log(activeEntitlements, 'activeEntitlements')
+      if (activeEntitlements.length > 0) {
+        // Refresh subscription after purchase (polls backend status)
         await refreshSubscription();
         return true;
       }
@@ -154,7 +190,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
     try {
       const customerInfo = await Purchases.restorePurchases();
-      if (customerInfo?.entitlements?.active) {
+      const activeEntitlements = Object.keys(customerInfo?.entitlements?.active || {});
+      if (activeEntitlements.length > 0) {
         await refreshSubscription();
         return true;
       }

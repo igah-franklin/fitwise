@@ -6,6 +6,7 @@
 // to by `generateOutfit`.
 
 import type { Outfit, OutfitItem, OutfitOccasion } from './types';
+import * as SecureStore from 'expo-secure-store';
 import { getWardrobe } from './wardrobe';
 import { getProfile } from './profile';
 import { trackEvent } from './posthog';
@@ -30,46 +31,54 @@ export function occasionLabel(occasion: OutfitOccasion): string {
 }
 
 
-
-const PREVIEW_BY_OCCASION: Record<OutfitOccasion, string> = {
-  casual: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&h=800&fit=crop',
-  work: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&h=800&fit=crop',
-  'date-night': 'https://images.unsplash.com/photo-1488161628813-04466f872be2?w=600&h=800&fit=crop',
-  'night-out': 'https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=600&h=800&fit=crop',
-  travel: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=600&h=800&fit=crop',
-  wedding: 'https://images.unsplash.com/photo-1593030103066-0093718efeb9?w=600&h=800&fit=crop',
-  'business-meeting': 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&h=800&fit=crop',
-  vacation: 'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=600&h=800&fit=crop',
-  errands: 'https://images.unsplash.com/photo-1516257984-b1b4d707412e?w=600&h=800&fit=crop',
-  gym: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=600&h=800&fit=crop',
-};
-
 import api from './api';
 
 let store: Outfit[] = [];
 let hydrated = false;
+let hydrationPromise: Promise<Outfit[]> | null = null;
 
-export async function hydrateOutfits(): Promise<Outfit[]> {
+export async function hydrateOutfits(retryCount = 0): Promise<Outfit[]> {
   if (hydrated) return store;
-  try {
-    const res = await api.get('/style/outfits');
-    if (res.data && Array.isArray(res.data)) {
-      store = res.data.map(o => {
-        const outfit = { ...o, id: o._id || o.id };
-        if (outfit.items) {
-          outfit.items = outfit.items.map((i: any) => ({
-            ...i,
-            wardrobeItem: i.wardrobeItemId || i.wardrobeItem
-          }));
-        }
-        return outfit;
-      });
+  if (hydrationPromise) return hydrationPromise;
+
+  hydrationPromise = (async () => {
+    try {
+      const token = await SecureStore.getItemAsync('token');
+      if (!token) {
+        return [];
+      }
+
+      console.log(`[Outfits Cache] Fetching outfits (attempt ${retryCount + 1})...`);
+      const res = await api.get('/style/outfits');
+      if (res.data && Array.isArray(res.data)) {
+        store = res.data.map(o => {
+          const outfit = { ...o, id: o._id || o.id };
+          if (outfit.items) {
+            outfit.items = outfit.items.map((i: any) => ({
+              ...i,
+              wardrobeItem: i.wardrobeItemId || i.wardrobeItem
+            }));
+          }
+          return outfit;
+        });
+        hydrated = true;
+      }
+    } catch (error: any) {
+      console.error('[Outfits Cache] Failed to hydrate:', error?.response?.status, error?.message || error);
+      if (retryCount < 3) {
+        console.log(`[Outfits Cache] Retrying hydration in 1.5s... (Attempt ${retryCount + 1}/3)`);
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        hydrationPromise = null; // Clear so the recursive call starts a new request
+        return hydrateOutfits(retryCount + 1);
+      }
+      hydrated = true; // Fallback to true after retries fail to prevent infinite splash loading
+    } finally {
+      hydrationPromise = null;
     }
-  } catch {
-    // fallback
-  }
-  hydrated = true;
-  return store;
+    return store;
+  })();
+
+  return hydrationPromise;
 }
 
 export function getOutfits(): Outfit[] {
@@ -100,6 +109,7 @@ export async function removeOutfit(id: string): Promise<void> {
 export function clearOutfits(): void {
   store.length = 0;
   hydrated = false;
+  hydrationPromise = null;
 }
 
 const mockWeather = [
