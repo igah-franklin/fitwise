@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,6 +38,7 @@ import { buildWardrobe } from '@/lib/wardrobe';
 import { useSubscription } from '@/lib/subscription';
 import type { BudgetRange, StyleType } from '@/lib/types';
 import { trackEvent } from '@/lib/posthog';
+import { Mannequin } from '@/components/ui/Mannequin';
 
 const STEPS = [
   { title: 'Set up for the perfect wardrobe', subtitle: "Before we curate your wardrobe, let's understand you better. Here is why we need a few details:" },
@@ -45,20 +47,24 @@ const STEPS = [
   { title: 'Your Budget', subtitle: 'We tailor prices and brands to your range.' },
 ];
 
-const MEASUREMENT_FIELDS: {
-  key: keyof Measurements;
-  label: string;
-  unit: string;
-  placeholder: string;
-  required?: boolean;
-}[] = [
-    { key: 'height', label: 'Height', unit: 'cm', placeholder: '178', required: true },
-    { key: 'weight', label: 'Weight', unit: 'kg', placeholder: '74', required: true },
-    { key: 'chest', label: 'Chest', unit: 'cm', placeholder: '100', required: true },
-    { key: 'waist', label: 'Waist', unit: 'cm', placeholder: '82', required: true },
-    { key: 'shoulderWidth', label: 'Shoulders', unit: 'cm', placeholder: '46' },
-    { key: 'inseam', label: 'Inseam', unit: 'cm', placeholder: '80' },
-  ];
+const getFieldsForGender = (gender: string) => {
+  if (gender === 'female') {
+    return [
+      { key: 'height' as const, label: 'Height', unit: 'cm', placeholder: '165', required: true },
+      { key: 'shoulderWidth' as const, label: 'Shoulders', unit: 'cm', placeholder: '38', required: true },
+      { key: 'bust' as const, label: 'Bust', unit: 'cm', placeholder: '90', required: true },
+      { key: 'waist' as const, label: 'Waist', unit: 'cm', placeholder: '68', required: true },
+      { key: 'hip' as const, label: 'Hips', unit: 'cm', placeholder: '94', required: true },
+    ];
+  } else {
+    return [
+      { key: 'height' as const, label: 'Height', unit: 'cm', placeholder: '178', required: true },
+      { key: 'shoulderWidth' as const, label: 'Shoulders', unit: 'cm', placeholder: '44', required: true },
+      { key: 'chest' as const, label: 'Chest', unit: 'cm', placeholder: '100', required: true },
+      { key: 'waist' as const, label: 'Waist', unit: 'cm', placeholder: '84', required: true },
+    ];
+  }
+};
 
 export default function SetupScreen() {
   const { theme } = useTheme();
@@ -83,10 +89,14 @@ export default function SetupScreen() {
   const [budget, setBudget] = useState<BudgetRange>(existing?.budget ?? 'mid-range');
   const [photos, setPhotos] = useState<ProfilePhotos>(existing?.photos ?? []);
 
+  const [activeField, setActiveField] = useState<keyof Measurements | null>(null);
+  const inputRefs = React.useRef<Record<string, any>>({});
+
   const isLastStep = step === STEPS.length - 1;
 
-  const measurementsValid = MEASUREMENT_FIELDS.filter((f) => f.required).every(
-    (f) => measurements[f.key].trim().length > 0,
+  const genderFields = getFieldsForGender(gender);
+  const measurementsValid = genderFields.every(
+    (f) => measurements[f.key] && measurements[f.key]!.trim().length > 0,
   );
 
   useEffect(() => {
@@ -317,7 +327,7 @@ export default function SetupScreen() {
           {step === 1 && (
             <View>
               <Text style={styles.groupLabel}>Gender</Text>
-              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
                 {['male', 'female'].map(g => (
                   <PressScale
                     key={g}
@@ -326,7 +336,10 @@ export default function SetupScreen() {
                       { flex: 1, paddingVertical: 12, justifyContent: 'center' },
                       gender === g && styles.styleChipActive
                     ]}
-                    onPress={() => setGender(g)}
+                    onPress={() => {
+                      setGender(g);
+                      setActiveField(null);
+                    }}
                   >
                     <Text style={[
                       styles.styleChipText,
@@ -339,15 +352,29 @@ export default function SetupScreen() {
                 ))}
               </View>
 
-              <Text style={styles.groupLabel}>Measurements</Text>
+              {/* Mannequin Graphic and Guides */}
+              <Mannequin
+                gender={gender}
+                measurements={measurements}
+                activeField={activeField}
+                onSelectField={(field) => {
+                  setActiveField(field);
+                  inputRefs.current[field]?.focus();
+                }}
+              />
+
+              <Text style={[styles.groupLabel, { marginTop: 16 }]}>Measurements (cm)</Text>
               <View style={styles.measureGrid}>
-                {MEASUREMENT_FIELDS.map((field) => {
-                  const hasError = showErrors && field.required && !measurements[field.key].trim();
+                {genderFields.map((field) => {
+                  const hasError = showErrors && field.required && (!measurements[field.key] || !measurements[field.key]!.trim());
                   return (
                     <Input
+                      ref={(ref) => {
+                        inputRefs.current[field.key] = ref;
+                      }}
                       key={field.key}
                       style={styles.measureField}
-                      label={`${field.label}${field.required ? '' : ' (optional)'}`}
+                      label={field.label}
                       value={measurements[field.key]}
                       onChangeText={(v) => updateMeasurement(field.key, v)}
                       placeholder={field.placeholder}
@@ -355,6 +382,12 @@ export default function SetupScreen() {
                       hint={field.unit}
                       error={hasError ? 'Required' : undefined}
                       maxLength={3}
+                      onFocus={() => setActiveField(field.key)}
+                      onBlur={() => {
+                        if (activeField === field.key) {
+                          setActiveField(null);
+                        }
+                      }}
                     />
                   );
                 })}

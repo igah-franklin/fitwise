@@ -98,10 +98,6 @@ export default function WardrobeScreen() {
     ? wardrobeItems
     : wardrobeItems?.filter(item => item.category === selectedCategory);
 
-  const handleGenerateWardrobe = () => {
-    router.push('/setup');
-  };
-
   const isSwappingRef = React.useRef(false);
 
   const handleSwapItem = async (id: string) => {
@@ -125,9 +121,11 @@ export default function WardrobeScreen() {
           'You have reached your limit of wardrobe item generations for this month. Upgrade to Pro or Premium to generate more items!',
           [
             { text: 'Cancel', style: 'cancel' },
-            { text: 'Upgrade Now', onPress: () => {
-              router.push('/paywall');
-            }}
+            {
+              text: 'Upgrade Now', onPress: () => {
+                router.push('/paywall');
+              }
+            }
           ]
         );
       } else if (errMsg.match(/quota|429|503|demand|unavailable|busy|temporary/)) {

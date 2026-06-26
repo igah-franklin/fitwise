@@ -12,16 +12,25 @@ import api from '@/lib/api';
 import { useRouter } from 'expo-router';
 import { trackEvent } from '@/lib/posthog';
 import { Ionicons } from '@expo/vector-icons';
+import { useProfile, isProfileHydrated } from '@/lib/profile';
+import { useWardrobe, isWardrobeHydrated } from '@/lib/wardrobe';
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { signIn, user } = useAuth();
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
+
+  // Track profile and wardrobe hydration to maintain spinner until unmounted
+  const profileHydrated = isProfileHydrated();
+  const wardrobeHydrated = isWardrobeHydrated();
+
+  const isTransitioning = user !== null && (!profileHydrated || !wardrobeHydrated);
+  const showLoading = isLoading || isTransitioning;
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS,
@@ -37,6 +46,8 @@ export default function LoginScreen() {
 
   const handleGoogleSignIn = async (code: string) => {
     try {
+      setIsLoading(true);
+      setError('');
       const res = await api.post('/auth/google', {
         code,
         redirectUri: request?.redirectUri,
@@ -46,6 +57,7 @@ export default function LoginScreen() {
       await signIn(res.data.token, res.data);
       trackEvent('login_success', { provider: 'google' });
     } catch (error: any) {
+      setIsLoading(false);
       console.error('Google Sign In Failed', error);
       trackEvent('login_failed', { provider: 'google', reason: error.message || 'unknown' });
     }
@@ -53,6 +65,8 @@ export default function LoginScreen() {
 
   const handleAppleSignIn = async () => {
     try {
+      setIsLoading(true);
+      setError('');
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -67,6 +81,7 @@ export default function LoginScreen() {
       await signIn(res.data.token, res.data);
       trackEvent('login_success', { provider: 'apple' });
     } catch (e: any) {
+      setIsLoading(false);
       if (e.code === 'ERR_REQUEST_CANCELED') {
         trackEvent('login_cancelled', { provider: 'apple' });
       } else {
@@ -99,6 +114,7 @@ export default function LoginScreen() {
       await signIn(res.data.token, res.data);
       trackEvent('login_success', { provider: 'email' });
     } catch (e: any) {
+      setIsLoading(false);
       trackEvent('login_failed', { provider: 'email', reason: e.message || 'unknown' });
       if (e.message === 'Network Error') {
         setError('Cannot connect to server. Please check your internet connection and API URL.');
@@ -110,8 +126,6 @@ export default function LoginScreen() {
       } else {
         setError(e.response?.data?.message || 'Login Failed');
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -130,15 +144,20 @@ export default function LoginScreen() {
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <Input label="Email" placeholder="you@example.com" keyboardType="email-address" value={email} onChangeText={setEmail} />
-        <Input label="Password" placeholder="••••••••" secureTextEntry style={styles.passwordInput} value={password} onChangeText={setPassword} />
+        <Input label="Email" placeholder="you@example.com" keyboardType="email-address" value={email} onChangeText={setEmail} editable={!showLoading} />
+        <Input label="Password" placeholder="••••••••" secureTextEntry style={styles.passwordInput} value={password} onChangeText={setPassword} editable={!showLoading} />
 
         <View style={styles.forgotPasswordContainer}>
           <Pressable
-            onPress={() => router.push('/(auth)/forgot-password')}
+            onPress={() => {
+              if (showLoading) return;
+              router.push('/(auth)/forgot-password');
+            }}
+            disabled={showLoading}
             style={({ pressed }) => [
               styles.forgotPasswordPressable,
-              pressed && styles.pressedState
+              pressed && !showLoading && styles.pressedState,
+              showLoading && { opacity: 0.5 }
             ]}
           >
             <Ionicons name="key-outline" size={14} color={Colors.light.primary} style={styles.forgotPasswordIcon} />
@@ -146,7 +165,7 @@ export default function LoginScreen() {
           </Pressable>
         </View>
 
-        <Button title="Sign In" variant="primary" style={styles.signInButton} onPress={handleEmailSignIn} loading={isLoading} />
+        <Button title="Sign In" variant="primary" style={styles.signInButton} onPress={handleEmailSignIn} loading={showLoading} />
 
         {/* <View style={styles.divider}>
           <View style={styles.line} />
@@ -174,10 +193,15 @@ export default function LoginScreen() {
         <View style={styles.signUpContainer}>
           <Text style={styles.signUpText}>New to WearThis?</Text>
           <Pressable
-            onPress={() => router.push('/(auth)/signup')}
+            onPress={() => {
+              if (showLoading) return;
+              router.push('/(auth)/signup');
+            }}
+            disabled={showLoading}
             style={({ pressed }) => [
               styles.signUpButton,
-              pressed && styles.signUpButtonPressed
+              pressed && !showLoading && styles.signUpButtonPressed,
+              showLoading && { opacity: 0.5 }
             ]}
           >
             <Text style={styles.signUpButtonText}>Create an Account</Text>
