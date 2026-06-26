@@ -91,14 +91,19 @@ export async function hydrateProfile(retryCount = 0): Promise<UserProfile | null
       }
     } catch (error: any) {
       console.error('[Profile Cache] Failed to hydrate:', error?.response?.status, error?.message || error);
-      if (retryCount < 3) {
+      if (error?.response?.status === 404) {
+        console.log('[Profile Cache] Profile not found (404), setting cached to null and hydrated to true.');
+        cached = null;
+        hydrated = true;
+      } else if (retryCount < 3) {
         console.log(`[Profile Cache] Retrying hydration in 1.5s... (Attempt ${retryCount + 1}/3)`);
         await new Promise((resolve) => setTimeout(resolve, 1500));
         hydrationPromise = null; // Clear so the recursive call starts a new request
         return hydrateProfile(retryCount + 1);
+      } else {
+        cached = null;
+        hydrated = true; // Fallback to true after retries fail to prevent infinite splash loading
       }
-      cached = null;
-      hydrated = true; // Fallback to true after retries fail to prevent infinite splash loading
     } finally {
       hydrationPromise = null;
       emit();
