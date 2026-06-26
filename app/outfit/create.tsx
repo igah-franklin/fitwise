@@ -44,7 +44,6 @@ export default function CreateOutfitScreen() {
   const [step, setStep] = useState<0 | 1>(0);
   const [selectedOccasion, setSelectedOccasion] = useState<OutfitOccasion | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
 
   const handlePickImage = async (useCamera: boolean) => {
     let permission;
@@ -103,7 +102,7 @@ export default function CreateOutfitScreen() {
     setStep(1);
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = () => {
     if (!selectedOccasion) return;
 
     // Check usage limits locally first
@@ -119,98 +118,63 @@ export default function CreateOutfitScreen() {
       return;
     }
 
-    setIsGenerating(true);
+    const runBackgroundGeneration = async () => {
+      try {
+        let base64Photo: string | undefined;
+        if (photo) {
+          if (photo.startsWith('http://') || photo.startsWith('https://')) {
+            base64Photo = photo;
+          } else {
+            const rawBase64 = await FileSystem.readAsStringAsync(photo, {
+              encoding: 'base64',
+            });
+            base64Photo = `data:image/jpeg;base64,${rawBase64}`;
+          }
+        }
 
-    try {
-      let base64Photo: string | undefined;
-      if (photo) {
-        if (photo.startsWith('http://') || photo.startsWith('https://')) {
-          base64Photo = photo;
+        await generateOutfit(selectedOccasion, base64Photo);
+        await refreshSubscription();
+      } catch (error: any) {
+        const errMsg = (error.message || '').toLowerCase();
+        
+        if (errMsg.includes('face verification failed') || errMsg.includes('400')) {
+          Alert.alert(
+            'Face Verification Failed',
+            'We could not detect a human face in the photo. Please try generating again without a photo.',
+            [
+              { text: 'OK', style: 'default' }
+            ]
+          );
+        } else if (
+          errMsg.includes('limit') ||
+          errMsg.includes('exceeded') ||
+          errMsg.includes('403') ||
+          errMsg.includes('used all')
+        ) {
+          Alert.alert(
+            'Limit Reached',
+            'You have reached your limit of outfit generations for this month. Upgrade to Pro or Premium to generate more outfits!',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Upgrade Now', onPress: () => router.push('/paywall') }
+            ]
+          );
+        } else if (errMsg.match(/quota|429|503|demand|unavailable|busy|temporary/)) {
+          Alert.alert(
+            'High Traffic',
+            "We're experiencing high traffic with our provider. Please try again in a few moments."
+          );
         } else {
-          const rawBase64 = await FileSystem.readAsStringAsync(photo, {
-            encoding: 'base64',
-          });
-          base64Photo = `data:image/jpeg;base64,${rawBase64}`;
+          Alert.alert('Generation Error', error.message || 'Failed to generate outfit. Please try again.');
         }
       }
+    };
 
-      const newOutfit = await generateOutfit(selectedOccasion, base64Photo);
-      await refreshSubscription();
-      setIsGenerating(false);
-      
-      // Navigate to outfit details
-      router.replace(`/outfit/${newOutfit.id}`);
-    } catch (error: any) {
-      setIsGenerating(false);
-      
-      const errMsg = (error.message || '').toLowerCase();
-      
-      // Face detection failure
-      if (errMsg.includes('face verification failed') || errMsg.includes('400')) {
-        Alert.alert(
-          'Face Verification Failed',
-          error.message || 'We could not detect a human face in the photo. Please upload a clear selfie or portrait shot, or skip the photo step.',
-          [
-            { text: 'Try Another Photo', style: 'default' },
-            { 
-              text: 'Generate Without Photo', 
-              onPress: async () => {
-                setPhoto(null);
-                // retry generation without photo
-                setIsGenerating(true);
-                try {
-                  const newOutfit = await generateOutfit(selectedOccasion);
-                  await refreshSubscription();
-                  setIsGenerating(false);
-                  router.replace(`/outfit/${newOutfit.id}`);
-                } catch (err: any) {
-                  setIsGenerating(false);
-                  const innerMsg = (err.message || '').toLowerCase();
-                  if (innerMsg.includes('limit') || innerMsg.includes('exceeded') || innerMsg.includes('403')) {
-                    Alert.alert(
-                      'Limit Reached',
-                      'You have reached your limit of outfit generations for this month. Upgrade to Pro or Premium to generate more outfits!',
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: 'Upgrade Now', onPress: () => router.push('/paywall') }
-                      ]
-                    );
-                  } else if (innerMsg.match(/quota|429|503|demand|unavailable|busy|temporary/)) {
-                    Alert.alert(
-                      'High Traffic',
-                      "We're experiencing high traffic with our provider. Please try again in a few moments."
-                    );
-                  } else {
-                    Alert.alert('Error', err.message || 'Failed to generate outfit.');
-                  }
-                }
-              }
-            }
-          ]
-        );
-      } else if (errMsg.includes('limit') || errMsg.includes('exceeded') || errMsg.includes('403')) {
-        Alert.alert(
-          'Limit Reached',
-          'You have reached your limit of outfit generations for this month. Upgrade to Pro or Premium to generate more outfits!',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Upgrade Now', onPress: () => router.push('/paywall') }
-          ]
-        );
-      } else if (errMsg.match(/quota|429|503|demand|unavailable|busy|temporary/)) {
-        Alert.alert(
-          'High Traffic',
-          "We're experiencing high traffic with our provider. Please try again in a few moments."
-        );
-      } else {
-        Alert.alert('Generation Error', error.message || 'Failed to generate outfit. Please try again.');
-      }
-    }
+    void runBackgroundGeneration();
+    router.back();
   };
 
-  if (isGenerating) {
-    return <GeneratingOutfitScreen />;
-  }
+
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

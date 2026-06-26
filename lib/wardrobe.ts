@@ -201,6 +201,7 @@ export async function swapItem(id: string): Promise<void> {
         priorityPhase: item.priorityPhase,
         category: item.category,
         subcategory: item.subcategory,
+        swapItemId: (item as any)._id || item.id,
       });
       // Replace the item with the newly generated AI item
       const newItem = res.data;
@@ -213,12 +214,6 @@ export async function swapItem(id: string): Promise<void> {
         category: newItem.category,
         name: newItem.name,
       });
-
-      // Also delete the old one from the backend
-      try {
-        const endpointId = (item as any)._id || item.id;
-        await api.delete(`/style/wardrobe/${endpointId}`);
-      } catch (e) {}
     } catch (error: any) {
       console.error('Failed to swap wardrobe item via AI', error.response?.data || error);
       const backendMessage = error.response?.data?.message || error.message || 'Failed to swap item';

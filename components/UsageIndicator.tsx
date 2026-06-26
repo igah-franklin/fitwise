@@ -15,7 +15,7 @@ export function UsageIndicator({ type, showUpgradeBtn = true }: UsageIndicatorPr
   const { theme } = useTheme();
   const { usage, subscriptionTier, isLoading } = useSubscription();
 
-  if (isLoading || !usage) {
+  if (!usage) {
     return null;
   }
 

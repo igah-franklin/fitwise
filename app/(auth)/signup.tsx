@@ -18,24 +18,30 @@ export default function SignupScreen() {
   const [error, setError] = useState('');
 
   const handleSignUp = async () => {
-    if (!name || !email || !password) {
+    const trimmedEmail = email.trim();
+    if (!name || !trimmedEmail || !password) {
       setError('Please fill in all fields');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setError('Please enter a valid email address');
       return;
     }
 
     try {
       setIsLoading(true);
       setError('');
-      await api.post('/auth/register', { name, email, password });
-      trackEvent('registration_success', { email });
+      await api.post('/auth/register', { name, email: trimmedEmail, password });
+      trackEvent('registration_success', { email: trimmedEmail });
 
       // Navigate to verification screen on success
       router.push({
         pathname: '/(auth)/verify',
-        params: { email }
+        params: { email: trimmedEmail }
       });
     } catch (e: any) {
-      trackEvent('registration_failed', { email, reason: e.message || 'unknown' });
+      trackEvent('registration_failed', { email: trimmedEmail, reason: e.message || 'unknown' });
       if (e.message === 'Network Error') {
         setError('Cannot connect to server. Please check your internet connection and API URL.');
       } else {

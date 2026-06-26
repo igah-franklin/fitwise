@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, StyleSheet, ScrollView, Image, Dimensions, Modal, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, Dimensions, Modal, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 import { BlurView } from 'expo-blur';
@@ -11,9 +11,8 @@ import { AnimatedScreen, SlideUp, Stagger, PressScale } from '@/components/ui/Mo
 import { EmptyState } from '@/components/layout/EmptyState';
 import { useTheme } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
-import { getOutfits, formatTimeAgo, generateOutfit, removeOutfit, toggleOutfitPin } from '@/lib/outfits';
-import type { Outfit, OutfitOccasion } from '@/lib/types';
-import { GeneratingOutfitScreen } from '@/components/GeneratingOutfitScreen';
+import { getOutfits, formatTimeAgo, removeOutfit, toggleOutfitPin, useOutfits, refreshOutfits } from '@/lib/outfits';
+import type { Outfit } from '@/lib/types';
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal';
 import { UsageIndicator } from '@/components/UsageIndicator';
 import { useSubscription } from '@/lib/subscription';
@@ -24,92 +23,111 @@ const { width } = Dimensions.get('window');
 const cardWidth =
   (width - Layout.padding.screen * 2 - Layout.spacing.lg * 2 - Layout.spacing.md) / 2;
 
-const occasions: { key: OutfitOccasion; label: string; icon: string }[] = [
-  { key: 'casual', label: 'Casual', icon: 'cafe-outline' },
-  { key: 'work', label: 'Work', icon: 'briefcase-outline' },
-  { key: 'date-night', label: 'Date Night', icon: 'heart-outline' },
-  { key: 'night-out', label: 'Night Out', icon: 'wine-outline' },
-  { key: 'travel', label: 'Travel', icon: 'airplane-outline' },
-  { key: 'business-meeting', label: 'Meeting', icon: 'people-outline' },
-];
 
 export default function OutfitsScreen() {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
-  const { subscriptionTier } = useSubscription();
-  const [outfits, setOutfits] = useState<Outfit[]>(() => getOutfits());
+  const { subscriptionTier, refreshSubscription } = useSubscription();
+  const { outfits, isGenerating, regeneratingOutfitId } = useOutfits();
   const [deleteOutfitId, setDeleteOutfitId] = useState<string | null>(null);
-  
+
   const outfitToDelete = outfits.find(o => o.id === deleteOutfitId);
 
   // Refresh the list whenever the screen regains focus (e.g. after coming back
   // from the details screen, which may have generated/regenerated outfits).
   useFocusEffect(
     useCallback(() => {
-      setOutfits(getOutfits());
-    }, []),
+      void refreshOutfits();
+      void refreshSubscription();
+    }, [refreshSubscription]),
   );
 
-  const confirmRemoveOutfit = () => {
+  const confirmRemoveOutfit = async () => {
     if (deleteOutfitId) {
-      removeOutfit(deleteOutfitId);
-      setOutfits(getOutfits());
+      await removeOutfit(deleteOutfitId);
       setDeleteOutfitId(null);
+      void refreshSubscription();
     }
   };
 
   const handleTogglePin = async (id: string) => {
     await toggleOutfitPin(id);
-    setOutfits(getOutfits());
   };
 
-  const renderOutfit = (outfit: Outfit) => (
-    <PressScale
-      key={outfit.id}
-      style={styles.outfitCard}
-      onPress={() => router.push(`/outfit/${outfit.id}`)}
-    >
-      <View style={styles.outfitPreview}>
-        <Image source={{ uri: outfit.previewUrl }} style={styles.previewImage} />
-        <PressScale
-          onPress={() => handleTogglePin(outfit.id)}
-          hitSlop={10}
-          style={[styles.pinButton, outfit.pinned && styles.pinButtonActive]}
-        >
-          <Ionicons
-            name={outfit.pinned ? 'bookmark' : 'bookmark-outline'}
-            size={15}
-            color={outfit.pinned ? theme.onPrimary : '#fff'}
-          />
-        </PressScale>
-        <View style={styles.outfitOverlay}>
-          <View style={styles.occasionBadge}>
-            <Text style={styles.occasionBadgeText}>{outfit.occasion.toUpperCase()}</Text>
-          </View>
-        </View>
+  const renderGeneratingOutfitCard = () => (
+    <View style={[styles.outfitCard, styles.generatingOutfitCard]} key="generating_placeholder">
+      <View style={styles.generatingOutfitPreview}>
+        <ActivityIndicator size="small" color={theme.primary} />
+        <Text style={styles.generatingOutfitOverlayText}>Generating...</Text>
       </View>
       <View style={styles.outfitInfo}>
-        <View style={styles.outfitInfoHeader}>
-          <Text style={styles.outfitName}>{outfit.name}</Text>
-          <PressScale
-            onPress={() => {
-              if (subscriptionTier === 'free') {
-                router.push('/paywall');
-              } else {
-                setDeleteOutfitId(outfit.id);
-              }
-            }}
-            hitSlop={10}
-          >
-            <Ionicons name="trash-outline" size={16} color={theme.danger} />
-          </PressScale>
-        </View>
-        <Text style={styles.outfitTime}>
-          {outfit.pinned ? 'Pinned · ' : ''}{formatTimeAgo(outfit.createdAt)}
-        </Text>
+        <Text style={styles.generatingNamePlaceholder} numberOfLines={1}>AI is styling your outfit</Text>
+        <Text style={styles.generatingTimePlaceholder}>Please wait...</Text>
       </View>
-    </PressScale>
+    </View>
   );
+
+  const renderOutfit = (outfit: Outfit) => {
+    const isRegenerating = regeneratingOutfitId === outfit.id || regeneratingOutfitId === (outfit as any)._id;
+
+    return (
+      <PressScale
+        key={outfit.id}
+        style={styles.outfitCard}
+        onPress={() => !isRegenerating && router.push(`/outfit/${outfit.id}`)}
+      >
+        <View style={styles.outfitPreview}>
+          <Image source={{ uri: outfit.previewUrl }} style={styles.previewImage} />
+          {!isRegenerating && (
+            <PressScale
+              onPress={() => handleTogglePin(outfit.id)}
+              hitSlop={10}
+              style={[styles.pinButton, outfit.pinned && styles.pinButtonActive]}
+            >
+              <Ionicons
+                name={outfit.pinned ? 'bookmark' : 'bookmark-outline'}
+                size={15}
+                color={outfit.pinned ? theme.onPrimary : '#fff'}
+              />
+            </PressScale>
+          )}
+          <View style={styles.outfitOverlay}>
+            <View style={styles.occasionBadge}>
+              <Text style={styles.occasionBadgeText}>{outfit.occasion.toUpperCase()}</Text>
+            </View>
+          </View>
+          {isRegenerating && (
+            <View style={styles.cardRegeneratingOverlay}>
+              <ActivityIndicator size="small" color="#FFFFFF" />
+              <Text style={styles.cardRegeneratingText}>Regenerating...</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.outfitInfo}>
+          <View style={styles.outfitInfoHeader}>
+            <Text style={styles.outfitName}>{outfit.name}</Text>
+            {!isRegenerating && (
+              <PressScale
+                onPress={() => {
+                  if (subscriptionTier === 'free') {
+                    router.push('/paywall');
+                  } else {
+                    setDeleteOutfitId(outfit.id);
+                  }
+                }}
+                hitSlop={10}
+              >
+                <Ionicons name="trash-outline" size={16} color={theme.danger} />
+              </PressScale>
+            )}
+          </View>
+          <Text style={styles.outfitTime}>
+            {outfit.pinned ? 'Pinned · ' : ''}{formatTimeAgo(outfit.createdAt)}
+          </Text>
+        </View>
+      </PressScale>
+    );
+  };
 
 
 
@@ -151,6 +169,7 @@ export default function OutfitsScreen() {
                 <Button
                   title="Create New Outfit"
                   variant="primary"
+                  disabled={isGenerating}
                   onPress={() => router.push('/outfit/create')}
                   icon={<Ionicons name="color-wand-outline" size={18} color={theme.onPrimary} />}
                   style={styles.generateButton}
@@ -163,8 +182,9 @@ export default function OutfitsScreen() {
                   <Text style={styles.sectionTitle}>Recent Outfits</Text>
                 </View>
 
-                {outfits.length > 0 ? (
+                {outfits.length > 0 || isGenerating ? (
                   <View style={styles.outfitsGrid}>
+                    {isGenerating && renderGeneratingOutfitCard()}
                     {outfits?.map(renderOutfit)}
                   </View>
                 ) : (
@@ -172,8 +192,8 @@ export default function OutfitsScreen() {
                     icon="shirt-outline"
                     title="No outfits yet"
                     message="Generate your first AI-powered outfit to get started"
-                    actionTitle="Create Outfit"
-                    onAction={() => router.push('/outfit/create')}
+                    actionTitle={isGenerating ? undefined : "Create Outfit"}
+                    onAction={isGenerating ? undefined : () => router.push('/outfit/create')}
                   />
                 )}
               </SlideUp>
@@ -528,5 +548,50 @@ const makeStyles = (theme: any) => StyleSheet.create({
   generateActionButton: {
     borderRadius: Layout.borderRadius.full,
     height: 56,
+  },
+  generatingOutfitCard: {
+    borderColor: theme.primaryMuted,
+    opacity: 0.85,
+  },
+  generatingOutfitPreview: {
+    aspectRatio: 3 / 4,
+    backgroundColor: theme.surfaceElevated,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  generatingOutfitOverlayText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.primary,
+    letterSpacing: 0.5,
+  },
+  generatingNamePlaceholder: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.textSecondary,
+    marginBottom: 4,
+  },
+  generatingTimePlaceholder: {
+    fontSize: 12,
+    color: theme.textMuted,
+  },
+  cardRegeneratingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+    zIndex: 10,
+  },
+  cardRegeneratingText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });

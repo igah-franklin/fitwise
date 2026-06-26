@@ -15,19 +15,25 @@ export default function ForgotPasswordScreen() {
   const [error, setError] = useState('');
 
   const handleSendResetCode = async () => {
-    if (!email) {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
       setError('Please enter your email address');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setError('Please enter a valid email address');
       return;
     }
 
     try {
       setIsLoading(true);
       setError('');
-      await api.post('/auth/forgot-password', { email });
+      await api.post('/auth/forgot-password', { email: trimmedEmail });
 
       router.push({
         pathname: '/(auth)/reset-password',
-        params: { email }
+        params: { email: trimmedEmail }
       });
     } catch (e: any) {
       setError(e.response?.data?.message || 'Failed to send reset email');
