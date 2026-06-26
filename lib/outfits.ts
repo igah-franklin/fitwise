@@ -5,6 +5,7 @@
 // Outfits live in a module-level store, seeded with mock history and appended
 // to by `generateOutfit`.
 
+import { useEffect, useReducer } from 'react';
 import type { Outfit, OutfitItem, OutfitOccasion } from './types';
 import * as SecureStore from 'expo-secure-store';
 import { getWardrobe } from './wardrobe';
@@ -36,6 +37,19 @@ import api from './api';
 let store: Outfit[] = [];
 let hydrated = false;
 let hydrationPromise: Promise<Outfit[]> | null = null;
+const listeners = new Set<() => void>();
+const emit = () => listeners.forEach((l) => l());
+
+let isGeneratingOutfit = false;
+let regeneratingOutfitId: string | null = null;
+
+export function getIsGeneratingOutfit(): boolean {
+  return isGeneratingOutfit;
+}
+
+export function getRegeneratingOutfitId(): string | null {
+  return regeneratingOutfitId;
+}
 
 export async function hydrateOutfits(retryCount = 0): Promise<Outfit[]> {
   if (hydrated) return store;
@@ -74,6 +88,7 @@ export async function hydrateOutfits(retryCount = 0): Promise<Outfit[]> {
       hydrated = true; // Fallback to true after retries fail to prevent infinite splash loading
     } finally {
       hydrationPromise = null;
+      emit();
     }
     return store;
   })();
@@ -89,6 +104,44 @@ export function getOutfits(): Outfit[] {
   });
 }
 
+export function useOutfits(): { outfits: Outfit[]; isGenerating: boolean; regeneratingOutfitId: string | null } {
+  const [, force] = useReducer((c) => c + 1, 0);
+  useEffect(() => {
+    listeners.add(force);
+    void hydrateOutfits();
+    return () => {
+      listeners.delete(force);
+    };
+  }, []);
+  return { outfits: getOutfits(), isGenerating: isGeneratingOutfit, regeneratingOutfitId };
+}
+
+export async function refreshOutfits(): Promise<Outfit[]> {
+  try {
+    const token = await SecureStore.getItemAsync('token');
+    if (!token) return [];
+    
+    const res = await api.get('/style/outfits');
+    if (res.data && Array.isArray(res.data)) {
+      store = res.data.map(o => {
+        const outfit = { ...o, id: o._id || o.id };
+        if (outfit.items) {
+          outfit.items = outfit.items.map((i: any) => ({
+            ...i,
+            wardrobeItem: i.wardrobeItemId || i.wardrobeItem
+          }));
+        }
+        return outfit;
+      });
+      hydrated = true;
+      emit();
+    }
+  } catch (error) {
+    console.error('[Outfits Cache] Failed to refresh:', error);
+  }
+  return store;
+}
+
 export function getOutfitById(id: string): Outfit | undefined {
   return store.find((o) => o.id === id || (o as any)._id === id);
 }
@@ -98,6 +151,7 @@ export async function removeOutfit(id: string): Promise<void> {
   if (index !== -1) {
     const outfit = store[index];
     store.splice(index, 1);
+    emit();
     try {
       const endpointId = (outfit as any)._id || outfit.id;
       await api.delete(`/style/outfits/${endpointId}`);
@@ -110,6 +164,7 @@ export function clearOutfits(): void {
   store.length = 0;
   hydrated = false;
   hydrationPromise = null;
+  emit();
 }
 
 const mockWeather = [
@@ -123,8 +178,16 @@ const mockWeather = [
  * Generate a new outfit for the given occasion from the user's wardrobe, add it
  * to the store (newest first) and return it.
  */
-export async function generateOutfit(occasion: OutfitOccasion, photo?: string): Promise<Outfit> {
+export async function generateOutfit(occasion: OutfitOccasion, photo?: string, swapOutfitId?: string): Promise<Outfit> {
   const weatherContext = mockWeather[Math.floor(Math.random() * mockWeather.length)];
+
+  if (swapOutfitId) {
+    regeneratingOutfitId = swapOutfitId;
+    emit();
+  } else {
+    isGeneratingOutfit = true;
+    emit();
+  }
 
   try {
     trackEvent('outfit_generation_requested', {
@@ -135,6 +198,7 @@ export async function generateOutfit(occasion: OutfitOccasion, photo?: string): 
       occasion,
       weatherContext,
       photo,
+      swapOutfitId,
     };
 
     // Call our new AI generation endpoint
@@ -148,6 +212,14 @@ export async function generateOutfit(occasion: OutfitOccasion, photo?: string): 
         ...i,
         wardrobeItem: i.wardrobeItemId || i.wardrobeItem
       }));
+
+      if (swapOutfitId) {
+        const index = store.findIndex((o) => o.id === swapOutfitId || (o as any)._id === swapOutfitId);
+        if (index !== -1) {
+          store.splice(index, 1);
+        }
+      }
+
       store.unshift(created);
       trackEvent('outfit_generation_succeeded', {
         occasion,
@@ -166,6 +238,14 @@ export async function generateOutfit(occasion: OutfitOccasion, photo?: string): 
       error: backendMessage,
     });
     throw new Error(backendMessage);
+  } finally {
+    if (swapOutfitId) {
+      regeneratingOutfitId = null;
+      emit();
+    } else {
+      isGeneratingOutfit = false;
+      emit();
+    }
   }
 }
 
@@ -204,6 +284,7 @@ export async function toggleOutfitPin(id: string): Promise<boolean> {
   if (!outfit) return false;
   const next = !outfit.pinned;
   outfit.pinned = next;
+  emit();
   try {
     const endpointId = (outfit as any)._id || outfit.id;
     await api.put(`/style/outfits/${endpointId}`, { pinned: next });

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Image, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +19,7 @@ import {
   updateOutfitFeedback,
   toggleOutfitPin,
   removeOutfit,
+  useOutfits,
 } from '@/lib/outfits';
 import type { ClothingCategory, ItemStatus, OutfitItem } from '@/lib/types';
 import { GeneratingOutfitScreen } from '@/components/GeneratingOutfitScreen';
@@ -42,12 +43,22 @@ const getStatusMeta = (theme: any): Record<ItemStatus, { label: string; color: s
 export default function OutfitDetailsScreen() {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
-  const { subscriptionTier } = useSubscription();
+  const { subscriptionTier, refreshSubscription } = useSubscription();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { regeneratingOutfitId } = useOutfits();
   const [outfit, setOutfit] = useState(() => (id ? getOutfitById(id) : undefined));
   const [pinned, setPinned] = useState(!!outfit?.pinned);
-  const [regenerating, setRegenerating] = useState(false);
+  const [localRegenerating, setLocalRegenerating] = useState(false);
   const [feedback, setFeedback] = useState<'like' | 'dislike' | undefined>(outfit?.feedback);
+
+  const isMounted = React.useRef(true);
+  React.useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  const isThisRegenerating = localRegenerating || (!!outfit && (regeneratingOutfitId === outfit.id || regeneratingOutfitId === (outfit as any)._id));
 
   if (!outfit) {
     return (
@@ -75,18 +86,53 @@ export default function OutfitDetailsScreen() {
     setPinned(next);
   };
 
+  const isRegeneratingRef = React.useRef(false);
+
   const handleRegenerate = async () => {
-    setRegenerating(true);
+    if (isRegeneratingRef.current) return;
+    isRegeneratingRef.current = true;
+    setLocalRegenerating(true);
     try {
-      const next = await generateOutfit(outfit.occasion);
-      setRegenerating(false);
-      setPinned(false);
-      setFeedback(undefined);
-      setOutfit(next);
-      router.setParams({ id: next.id });
+      const next = await generateOutfit(outfit.occasion, undefined, outfit.id);
+      await refreshSubscription();
+      if (isMounted.current) {
+        setLocalRegenerating(false);
+        setPinned(false);
+        setFeedback(undefined);
+        setOutfit(next);
+        router.setParams({ id: next.id });
+      }
     } catch (e: any) {
-      setRegenerating(false);
-      Alert.alert('Generation Error', e.message);
+      if (isMounted.current) {
+        setLocalRegenerating(false);
+      }
+      const errMsg = (e.message || '').toLowerCase();
+      if (isMounted.current) {
+        if (
+          errMsg.includes('limit') ||
+          errMsg.includes('exceeded') ||
+          errMsg.includes('403') ||
+          errMsg.includes('used all')
+        ) {
+          Alert.alert(
+            'Limit Reached',
+            'You have reached your limit of outfit generations for this month. Upgrade to Pro or Premium to generate more outfits!',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Upgrade Now', onPress: () => router.push('/paywall') }
+            ]
+          );
+        } else if (errMsg.match(/quota|429|503|demand|unavailable|busy|temporary/)) {
+          Alert.alert(
+            'High Traffic',
+            "We're experiencing high traffic with our provider. Please try again in a few moments."
+          );
+        } else {
+          Alert.alert('Generation Error', e.message || 'Failed to regenerate outfit.');
+        }
+      }
+    } finally {
+      isRegeneratingRef.current = false;
     }
   };
 
@@ -138,9 +184,7 @@ export default function OutfitDetailsScreen() {
     );
   };
 
-  if (regenerating) {
-    return <GeneratingOutfitScreen />;
-  }
+
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -151,7 +195,12 @@ export default function OutfitDetailsScreen() {
         </PressScale>
         <Text style={styles.headerTitle}>Outfit Details</Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <PressScale style={styles.headerButton} onPress={handleTogglePin} hitSlop={10}>
+          <PressScale
+            style={styles.headerButton}
+            onPress={handleTogglePin}
+            disabled={isThisRegenerating}
+            hitSlop={10}
+          >
             <Ionicons
               name={pinned ? 'bookmark' : 'bookmark-outline'}
               size={22}
@@ -168,6 +217,7 @@ export default function OutfitDetailsScreen() {
                 router.back();
               }
             }} 
+            disabled={isThisRegenerating}
             hitSlop={10}
           >
             <Ionicons name="trash-outline" size={22} color={theme.danger} />
@@ -205,6 +255,12 @@ export default function OutfitDetailsScreen() {
                     {outfit.items.length} pieces · Generated {formatTimeAgo(outfit.createdAt)}
                   </Text>
                 </LinearGradient>
+                {isThisRegenerating && (
+                  <View style={styles.regeneratingOverlay}>
+                    <ActivityIndicator size="large" color="#FFFFFF" />
+                    <Text style={styles.regeneratingOverlayText}>Regenerating...</Text>
+                  </View>
+                )}
               </View>
             </SlideUp>
 
@@ -271,9 +327,9 @@ export default function OutfitDetailsScreen() {
 
               <View style={styles.actions}>
                 <Button
-                  title={regenerating ? 'Regenerating…' : 'Give me another option'}
+                  title={isThisRegenerating ? 'Regenerating…' : 'Give me another option'}
                   variant="primary"
-                  loading={regenerating}
+                  loading={isThisRegenerating}
                   onPress={handleRegenerate}
                   icon={<Ionicons name="refresh-outline" size={18} color={theme.onPrimary} />}
                   style={styles.regenerateButton}
@@ -281,6 +337,7 @@ export default function OutfitDetailsScreen() {
                 <Button
                   title={pinned ? 'Pinned to Top' : 'Pin Outfit'}
                   variant={pinned ? 'secondary' : 'outline'}
+                  disabled={isThisRegenerating}
                   onPress={handleTogglePin}
                   icon={
                     <Ionicons
@@ -294,6 +351,7 @@ export default function OutfitDetailsScreen() {
                   <Button
                     title={`Shop ${toBuyCount} Missing ${toBuyCount === 1 ? 'Piece' : 'Pieces'}`}
                     variant="ghost"
+                    disabled={isThisRegenerating}
                     onPress={handleShop}
                     icon={<Ionicons name="bag-outline" size={18} color={theme.primary} />}
                     style={styles.actionSpacing}
@@ -590,5 +648,23 @@ const makeStyles = (theme: any) => StyleSheet.create({
   notFoundButton: {
     marginTop: Layout.spacing.sm,
     alignSelf: 'stretch',
+  },
+  regeneratingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  regeneratingOverlayText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    marginTop: 12,
+    letterSpacing: 0.5,
   },
 });

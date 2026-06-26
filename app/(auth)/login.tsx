@@ -77,10 +77,25 @@ export default function LoginScreen() {
   };
 
   const handleEmailSignIn = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setError('Please enter your email address');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+    if (!password) {
+      setError('Please enter your password');
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError('');
-      const res = await api.post('/auth/login', { email, password });
+      const res = await api.post('/auth/login', { email: trimmedEmail, password });
       await signIn(res.data.token, res.data);
       trackEvent('login_success', { provider: 'email' });
     } catch (e: any) {
@@ -90,7 +105,7 @@ export default function LoginScreen() {
       } else if (e.response?.status === 403 && e.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
         router.push({
           pathname: '/(auth)/verify',
-          params: { email }
+          params: { email: trimmedEmail }
         });
       } else {
         setError(e.response?.data?.message || 'Login Failed');

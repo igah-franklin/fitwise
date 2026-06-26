@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, FlatList, Dimensions, Image as RNImage, Alert } from 'react-native';
+import { View, StyleSheet, FlatList, Dimensions, Image as RNImage, Alert, ActivityIndicator, Pressable } from 'react-native';
 import Animated, { FadeIn, FadeOut, withRepeat, withTiming, useSharedValue, useAnimatedStyle, Easing } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { Card } from '@/components/ui/Card';
@@ -12,7 +12,7 @@ import { AnimatedScreen, SlideUp, Stagger, PressScale } from '@/components/ui/Mo
 import { EmptyState } from '@/components/layout/EmptyState';
 import { useTheme } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
-import { useWardrobe, markAsOwned, swapItem, removeWardrobeItem } from '@/lib/wardrobe';
+import { useWardrobe, markAsOwned, swapItem, removeWardrobeItem, refreshWardrobe } from '@/lib/wardrobe';
 import type { WardrobeItem, ClothingCategory } from '@/lib/types';
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal';
 import { ConfirmSwapModal } from '@/components/ui/ConfirmSwapModal';
@@ -68,21 +68,29 @@ function SkeletonImage({ uri, style, theme }: { uri: string, style: any, theme: 
 export default function WardrobeScreen() {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
-  const { subscriptionTier } = useSubscription();
+  const { subscriptionTier, refreshSubscription } = useSubscription();
   const [selectedCategory, setSelectedCategory] = useState<ClothingCategory | 'all'>('all');
   const [rebuilding, setRebuilding] = useState(false);
   const wardrobeItems = useWardrobe();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      void refreshWardrobe();
+      void refreshSubscription();
+    }, [refreshSubscription])
+  );
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
   const [swapItemId, setSwapItemId] = useState<string | null>(null);
-  const [isSwapping, setIsSwapping] = useState(false);
+  const [swappingId, setSwappingId] = useState<string | null>(null);
 
   const itemToDelete = wardrobeItems?.find(item => ((item as any)._id || item.id) === deleteItemId);
   const itemToSwap = wardrobeItems?.find(item => ((item as any)._id || item.id) === swapItemId);
 
-  const confirmRemoveItem = () => {
+  const confirmRemoveItem = async () => {
     if (deleteItemId) {
-      removeWardrobeItem(deleteItemId);
+      await removeWardrobeItem(deleteItemId);
       setDeleteItemId(null);
+      void refreshSubscription();
     }
   };
 
@@ -94,21 +102,30 @@ export default function WardrobeScreen() {
     router.push('/setup');
   };
 
+  const isSwappingRef = React.useRef(false);
+
   const handleSwapItem = async (id: string) => {
-    setIsSwapping(true);
+    if (isSwappingRef.current) return;
+    isSwappingRef.current = true;
+    setSwapItemId(null);
+    setSwappingId(id);
     try {
       await swapItem(id);
-      setSwapItemId(null);
+      void refreshSubscription();
     } catch (error: any) {
       const errMsg = (error.message || '').toLowerCase();
-      if (errMsg.includes('limit') || errMsg.includes('exceeded') || errMsg.includes('403')) {
+      if (
+        errMsg.includes('limit') ||
+        errMsg.includes('exceeded') ||
+        errMsg.includes('403') ||
+        errMsg.includes('used all')
+      ) {
         Alert.alert(
           'Limit Reached',
           'You have reached your limit of wardrobe item generations for this month. Upgrade to Pro or Premium to generate more items!',
           [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Upgrade Now', onPress: () => {
-              setSwapItemId(null);
               router.push('/paywall');
             }}
           ]
@@ -122,7 +139,8 @@ export default function WardrobeScreen() {
         Alert.alert('Error', error.message || 'Failed to swap item.');
       }
     } finally {
-      setIsSwapping(false);
+      setSwappingId(null);
+      isSwappingRef.current = false;
     }
   };
 
@@ -144,60 +162,84 @@ export default function WardrobeScreen() {
     }
   };
 
-  const renderWardrobeItem = ({ item }: { item: WardrobeItem }) => (
-    <PressScale style={[styles.itemCard, { width: cardWidth }]}>
-      <View style={styles.itemHeader}>
-        <View style={[styles.categoryBadge, { backgroundColor: theme.primaryMuted }]}>
-          <Text style={[styles.categoryBadgeText, { color: theme.primary }]}>
-            PHASE {item.priorityPhase ?? 1}
-          </Text>
-        </View>
-        <View style={styles.itemHeaderRight}>
-          <Ionicons
-            name={getStatusIcon(item.status) as any}
-            size={18}
-            color={getStatusColor(item.status)}
-          />
-          <PressScale
-            onPress={() => {
-              if (subscriptionTier === 'free') {
-                router.push('/paywall');
-              } else {
-                setDeleteItemId((item as any)._id || item.id);
-              }
-            }}
-            hitSlop={10}
-            style={{ marginLeft: 8 }}
-          >
-            <Ionicons name="trash-outline" size={16} color={theme.danger} />
-          </PressScale>
-        </View>
-      </View>
+  const renderWardrobeItem = ({ item }: { item: WardrobeItem }) => {
+    const itemId = (item as any)._id || item.id;
+    const isSwappingThis = swappingId === itemId;
 
-      {item.imageUrl ? (
-        <SkeletonImage uri={item.imageUrl} style={styles.imageContainer} theme={theme} />
-      ) : (
-        <View style={[styles.imageContainer, styles.imagePlaceholder]}>
-          <Ionicons name="image-outline" size={32} color={theme.border} />
+    return (
+      <PressScale
+        style={[styles.itemCard, { width: cardWidth }]}
+        disabled={isSwappingThis}
+      >
+        <View style={styles.itemHeader}>
+          <View style={[styles.categoryBadge, { backgroundColor: theme.primaryMuted }]}>
+            <Text style={[styles.categoryBadgeText, { color: theme.primary }]}>
+              PHASE {item.priorityPhase ?? 1}
+            </Text>
+          </View>
+          <View style={styles.itemHeaderRight}>
+            <Ionicons
+              name={getStatusIcon(item.status) as any}
+              size={18}
+              color={getStatusColor(item.status)}
+            />
+            <PressScale
+              onPress={() => {
+                if (subscriptionTier === 'free') {
+                  router.push('/paywall');
+                } else {
+                  setDeleteItemId(itemId);
+                }
+              }}
+              disabled={isSwappingThis}
+              hitSlop={10}
+              style={{ marginLeft: 8 }}
+            >
+              <Ionicons name="trash-outline" size={16} color={theme.danger} />
+            </PressScale>
+          </View>
         </View>
-      )}
 
-      <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-      <Text style={styles.itemDetails} numberOfLines={1}>{item.color} • Size {item.recommendedSize}</Text>
-      <Text style={styles.itemBudget}>{item.budgetRange}</Text>
-
-      <View style={styles.itemActions}>
-        {item.status !== 'owned' && (
-          <PressScale onPress={() => markAsOwned((item as any)._id || item.id)} style={styles.actionButton}>
-            <Text style={styles.actionButtonText}>Own it</Text>
-          </PressScale>
+        {item.imageUrl ? (
+          <SkeletonImage uri={item.imageUrl} style={styles.imageContainer} theme={theme} />
+        ) : (
+          <View style={[styles.imageContainer, styles.imagePlaceholder]}>
+            <Ionicons name="image-outline" size={32} color={theme.border} />
+          </View>
         )}
-        <PressScale onPress={() => setSwapItemId((item as any)._id || item.id)} style={styles.actionButtonSecondary}>
-          <Text style={styles.actionButtonTextSecondary}>Swap</Text>
-        </PressScale>
-      </View>
-    </PressScale>
-  );
+
+        <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.itemDetails} numberOfLines={1}>{item.color} • Size {item.recommendedSize}</Text>
+        <Text style={styles.itemBudget}>{item.budgetRange}</Text>
+
+        <View style={styles.itemActions}>
+          {item.status !== 'owned' && (
+            <PressScale
+              onPress={() => markAsOwned(itemId)}
+              disabled={isSwappingThis}
+              style={styles.actionButton}
+            >
+              <Text style={styles.actionButtonText}>Own it</Text>
+            </PressScale>
+          )}
+          <PressScale
+            onPress={() => setSwapItemId(itemId)}
+            disabled={isSwappingThis}
+            style={styles.actionButtonSecondary}
+          >
+            <Text style={styles.actionButtonTextSecondary}>Swap</Text>
+          </PressScale>
+        </View>
+
+        {isSwappingThis && (
+          <Pressable style={styles.swappingOverlay}>
+            <ActivityIndicator size="small" color="#FFFFFF" />
+            <Text style={styles.swappingText}>Swapping...</Text>
+          </Pressable>
+        )}
+      </PressScale>
+    );
+  };
 
   const renderCategoryFilter = ({ item }: { item: typeof categories[0] }) => (
     <PressScale
@@ -365,7 +407,7 @@ export default function WardrobeScreen() {
           }
         }}
         onCancel={() => setSwapItemId(null)}
-        isSwapping={isSwapping}
+        isSwapping={false}
       />
     </Screen>
   );
@@ -453,6 +495,26 @@ const makeStyles = (theme: any) => StyleSheet.create({
     padding: Layout.spacing.md,
     borderWidth: 1,
     borderColor: theme.border,
+    overflow: 'hidden',
+  },
+  swappingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: Layout.borderRadius.md,
+    zIndex: 10,
+  },
+  swappingText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 8,
+    letterSpacing: 0.5,
   },
   itemHeader: {
     flexDirection: 'row',

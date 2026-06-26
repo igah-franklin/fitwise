@@ -100,17 +100,20 @@ export async function buildWardrobe(opts: {
   primaryStyle: StyleType;
   secondaryStyles: StyleType[];
   budget: BudgetRange;
+  gender: string;
 }): Promise<WardrobeItem[]> {
   try {
     trackEvent('wardrobe_generation_requested', {
       primaryStyle: opts.primaryStyle,
       secondaryStylesCount: opts.secondaryStyles.length,
       budget: opts.budget,
+      gender: opts.gender,
     });
     const res = await api.post('/style/wardrobe/generate', {
       primaryStyle: opts.primaryStyle,
       secondaryStyles: opts.secondaryStyles,
       budget: opts.budget,
+      gender: opts.gender,
     });
     wardrobe = res.data;
     hydrated = true;
@@ -138,7 +141,9 @@ export async function clearWardrobe(): Promise<void> {
 export async function markAsOwned(id: string): Promise<void> {
   const item = wardrobe.find((w) => w.id === id || (w as any)._id === id);
   if (item) {
+    const oldStatus = item.status;
     item.status = 'owned';
+    emit(); // Update UI instantly (Optimistic UI)
     try {
       const endpointId = (item as any)._id || item.id;
       await api.put(`/style/wardrobe/${endpointId}`, { status: 'owned' });
@@ -147,15 +152,21 @@ export async function markAsOwned(id: string): Promise<void> {
         name: item.name,
         category: item.category,
       });
-    } catch (e) { console.error(e) }
-    emit();
+    } catch (e) {
+      console.error(e);
+      item.status = oldStatus;
+      emit(); // Revert on failure
+    }
   }
 }
 
 export async function removeWardrobeItem(id: string): Promise<void> {
-  const item = wardrobe.find((w) => w.id === id || (w as any)._id === id);
-  wardrobe = wardrobe.filter((w) => w.id !== id && (w as any)._id !== id);
-  if (item) {
+  const itemIndex = wardrobe.findIndex((w) => w.id === id || (w as any)._id === id);
+  if (itemIndex > -1) {
+    const item = wardrobe[itemIndex];
+    // Remove from local array immediately
+    wardrobe = wardrobe.filter((w) => w.id !== id && (w as any)._id !== id);
+    emit(); // Update UI instantly (Optimistic UI)
     try {
       const endpointId = (item as any)._id || item.id;
       await api.delete(`/style/wardrobe/${endpointId}`);
@@ -164,9 +175,13 @@ export async function removeWardrobeItem(id: string): Promise<void> {
         name: item.name,
         category: item.category,
       });
-    } catch (e) { console.error(e) }
+    } catch (e) {
+      console.error(e);
+      // Revert on failure
+      wardrobe.splice(itemIndex, 0, item);
+      emit();
+    }
   }
-  emit();
 }
 
 export async function swapItem(id: string): Promise<void> {
@@ -184,6 +199,9 @@ export async function swapItem(id: string): Promise<void> {
         secondaryStyles: p?.secondaryStyles || [],
         budget: p?.budget || 'mid-range',
         priorityPhase: item.priorityPhase,
+        category: item.category,
+        subcategory: item.subcategory,
+        swapItemId: (item as any)._id || item.id,
       });
       // Replace the item with the newly generated AI item
       const newItem = res.data;
@@ -196,12 +214,6 @@ export async function swapItem(id: string): Promise<void> {
         category: newItem.category,
         name: newItem.name,
       });
-
-      // Also delete the old one from the backend
-      try {
-        const endpointId = (item as any)._id || item.id;
-        await api.delete(`/style/wardrobe/${endpointId}`);
-      } catch (e) {}
     } catch (error: any) {
       console.error('Failed to swap wardrobe item via AI', error.response?.data || error);
       const backendMessage = error.response?.data?.message || error.message || 'Failed to swap item';
@@ -212,6 +224,23 @@ export async function swapItem(id: string): Promise<void> {
       throw new Error(backendMessage);
     }
   }
+}
+
+export async function refreshWardrobe(): Promise<WardrobeItem[]> {
+  try {
+    const token = await SecureStore.getItemAsync('token');
+    if (!token) return [];
+    
+    const res = await api.get('/style/wardrobe');
+    if (res.data && Array.isArray(res.data)) {
+      wardrobe = res.data;
+      hydrated = true;
+      emit();
+    }
+  } catch (error) {
+    console.error('[Wardrobe Cache] Failed to refresh:', error);
+  }
+  return wardrobe;
 }
 
 
