@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { Card } from '@/components/ui/Card';
@@ -11,7 +11,7 @@ import { AnimatedScreen, SlideUp, Stagger, PressScale } from '@/components/ui/Mo
 import { useTheme } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
 import { useProfile, measurementsSummary, styleLabel, clearProfile } from '@/lib/profile';
-import { useWardrobe, clearWardrobe } from '@/lib/wardrobe';
+import { useWardrobe, clearWardrobe, refreshWardrobe } from '@/lib/wardrobe';
 import { getOutfits, clearOutfits } from '@/lib/outfits';
 import { useAuth } from '@/lib/AuthContext';
 import { useSubscription } from '@/lib/subscription';
@@ -59,6 +59,12 @@ export default function ProfileScreen() {
   const styles = makeStyles(theme);
   const profile = useProfile();
   const wardrobe = useWardrobe();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      void refreshWardrobe();
+    }, [])
+  );
   const { user, signOut } = useAuth();
   const { subscriptionTier } = useSubscription();
 

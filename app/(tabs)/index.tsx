@@ -12,7 +12,7 @@ import { useTheme } from '@/lib/theme';
 import { THEME } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
 import { getOutfits, hydrateOutfits, formatTimeAgo, occasionLabel } from '@/lib/outfits';
-import { useWardrobe } from '@/lib/wardrobe';
+import { useWardrobe, refreshWardrobe } from '@/lib/wardrobe';
 import { EmptyState } from '@/components/layout/EmptyState';
 import { useFeatureFlag } from 'posthog-react-native';
 
@@ -31,6 +31,8 @@ export default function HomeScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      // Refresh wardrobe to keep count accurate
+      void refreshWardrobe();
       // Load outfits and update state to trigger re-render on the home screen
       hydrateOutfits().then(() => {
         setRecentOutfits(getOutfits().slice(0, 3));

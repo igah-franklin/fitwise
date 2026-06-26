@@ -3,7 +3,7 @@ import { View, StyleSheet, FlatList, Dimensions, Image as RNImage, Alert } from 
 import Animated, { FadeIn, FadeOut, withRepeat, withTiming, useSharedValue, useAnimatedStyle, Easing } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { Card } from '@/components/ui/Card';
@@ -12,7 +12,7 @@ import { AnimatedScreen, SlideUp, Stagger, PressScale } from '@/components/ui/Mo
 import { EmptyState } from '@/components/layout/EmptyState';
 import { useTheme } from '@/lib/theme';
 import { Layout } from '@/constants/Layout';
-import { useWardrobe, markAsOwned, swapItem, removeWardrobeItem } from '@/lib/wardrobe';
+import { useWardrobe, markAsOwned, swapItem, removeWardrobeItem, refreshWardrobe } from '@/lib/wardrobe';
 import type { WardrobeItem, ClothingCategory } from '@/lib/types';
 import { ConfirmDeleteModal } from '@/components/ui/ConfirmDeleteModal';
 import { ConfirmSwapModal } from '@/components/ui/ConfirmSwapModal';
@@ -72,6 +72,12 @@ export default function WardrobeScreen() {
   const [selectedCategory, setSelectedCategory] = useState<ClothingCategory | 'all'>('all');
   const [rebuilding, setRebuilding] = useState(false);
   const wardrobeItems = useWardrobe();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      void refreshWardrobe();
+    }, [])
+  );
   const [deleteItemId, setDeleteItemId] = useState<string | null>(null);
   const [swapItemId, setSwapItemId] = useState<string | null>(null);
   const [isSwapping, setIsSwapping] = useState(false);

@@ -164,7 +164,7 @@ export default function SetupScreen() {
     try {
       // Build the wardrobe first so the profile is only marked complete once
       // there's actually a wardrobe to shop from and generate outfits with.
-      await buildWardrobe({ primaryStyle, secondaryStyles, budget });
+      await buildWardrobe({ primaryStyle, secondaryStyles, budget, gender });
 
       const profile: UserProfile = {
         measurements,
