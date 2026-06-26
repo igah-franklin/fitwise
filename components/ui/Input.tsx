@@ -9,13 +9,13 @@ interface InputProps extends TextInputProps {
   hint?: string;
 }
 
-export function Input({
+export const Input = React.forwardRef<TextInput, InputProps>(({
   label,
   error,
   hint,
   style,
   ...props
-}: InputProps) {
+}, ref) => {
   const { theme } = useTheme();
   const styles = makeStyles(theme);
   const [focused, setFocused] = useState(false);
@@ -30,6 +30,7 @@ export function Input({
         error ? styles.inputError : undefined,
       ]}>
         <TextInput
+          ref={ref}
           style={[
             styles.input,
             props.secureTextEntry && styles.inputWithIcon,
@@ -63,7 +64,7 @@ export function Input({
       {hint && !error && <Text style={styles.hintText}>{hint}</Text>}
     </View>
   );
-}
+});
 
 const makeStyles = (theme: any) => StyleSheet.create({
   label: {

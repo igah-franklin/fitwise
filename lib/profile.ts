@@ -12,11 +12,13 @@ const STORAGE_KEY = 'user_style_profile';
 
 export interface Measurements {
   height: string; // cm
-  weight: string; // kg
-  chest: string; // cm
+  weight?: string; // kg
+  chest?: string; // cm
   waist: string; // cm
   shoulderWidth: string; // cm
-  inseam: string; // cm
+  inseam?: string; // cm
+  bust?: string; // cm
+  hip?: string; // cm
 }
 
 export type ProfilePhotos = string[];
@@ -38,6 +40,8 @@ export const EMPTY_MEASUREMENTS: Measurements = {
   waist: '',
   shoulderWidth: '',
   inseam: '',
+  bust: '',
+  hip: '',
 };
 
 export function emptyProfile(): UserProfile {
